@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -129,5 +130,17 @@ export const createAsset = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const { error: qrError } = await context.supabase.from("asset_qr_codes").insert({ organization_id: membership.organization_id, asset_id: asset.id, generated_by: context.userId });
     if (qrError) throw new Error(qrError.message);
+    return asset;
+  });
+
+export const getPublicAsset = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ token: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const url = process.env["SUPABASE_URL"];
+    const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+    if (!url || !key) throw new Error("Public asset verification is unavailable");
+    const client = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
+    const { data: asset, error } = await client.rpc("get_public_asset", { _token: data.token }).maybeSingle();
+    if (error) throw new Error(error.message);
     return asset;
   });
