@@ -11,4 +11,5 @@
 - [x] Validate database security, dependency exposure, and signed-out responsive behavior
 - [x] Add asset cost, installation-age, and active/inactive dashboard reporting
 - [x] Add category, location, status, and installation-age dashboard filters
+- [x] Export filtered dashboard figures, chart summaries, and asset list to CSV or PDF
 - [ ] Validate signed-in onboarding and asset workflows — blocked until the first account is confirmed
