@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 
 const assetSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -19,7 +21,7 @@ const assetSchema = z.object({
   remarks: z.string().trim().max(1000).optional(),
 });
 
-async function getMembership(supabase: Parameters<Parameters<typeof requireSupabaseAuth>[0]>[0] extends never ? never : any, userId: string) {
+async function getMembership(supabase: SupabaseClient<Database>, userId: string) {
   const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).limit(1).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
