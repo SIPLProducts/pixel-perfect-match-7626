@@ -1082,6 +1082,10 @@ export type Database = {
         Returns: boolean
       }
       is_org_member: { Args: { _organization_id: string }; Returns: boolean }
+      process_asset_transfer: {
+        Args: { _action: string; _transfer_id: string }
+        Returns: Database["public"]["Enums"]["workflow_status"]
+      }
     }
     Enums: {
       app_role:

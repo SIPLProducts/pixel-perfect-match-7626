@@ -23,6 +23,17 @@ const assetSchema = z.object({
   remarks: z.string().trim().max(1000).optional(),
 });
 
+const transferSchema = z.object({
+  assetId: z.string().uuid(),
+  toLocationId: z.string().uuid(),
+  toEmployeeId: z.string().uuid().optional(),
+  transferDate: z.string().date(),
+  reason: z.string().trim().min(3).max(200),
+  remarks: z.string().trim().max(1000).optional(),
+});
+
+const transferRoles = new Set(["super_admin", "admin", "asset_manager", "facility_manager", "it_manager"]);
+
 async function getMembership(supabase: SupabaseClient<Database>, userId: string) {
   const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).limit(1).maybeSingle();
   if (error) throw new Error(error.message);
@@ -104,12 +115,12 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
     const [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),
       context.supabase.from("profiles").select("full_name,job_title,avatar_url").eq("id", context.userId).maybeSingle(),
-      context.supabase.from("assets").select("id,asset_id,name,manufacturer,model,serial_number,status,condition,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
+      context.supabase.from("assets").select("id,asset_id,name,manufacturer,model,serial_number,status,condition,location_id,department_id,assigned_employee_id,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
       context.supabase.from("asset_categories").select("id,name,prefix").eq("organization_id", organizationId).order("name"),
       context.supabase.from("locations").select("id,name,type,code").eq("organization_id", organizationId).order("name"),
       context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name"),
       context.supabase.from("employees").select("id,full_name,employee_code,designation,status").eq("organization_id", organizationId).order("full_name"),
-      context.supabase.from("asset_transfers").select("id,status,transfer_date,reason,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(8),
+      context.supabase.from("asset_transfers").select("id,status,transfer_date,reason,remarks,from_location_id,to_location_id,from_employee_id,to_employee_id,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
       context.supabase.from("maintenance_requests").select("id,title,status,maintenance_type,next_maintenance_date,cost,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(8),
       context.supabase.from("asset_verifications").select("id,status,verified_at,assets(asset_id,name)").eq("organization_id", organizationId).order("verified_at", { ascending: false }).limit(8),
     ]);
@@ -133,6 +144,56 @@ export const createAsset = createServerFn({ method: "POST" })
     const { error: qrError } = await context.supabase.from("asset_qr_codes").insert({ organization_id: membership.organization_id, asset_id: asset.id, generated_by: context.userId });
     if (qrError) throw new Error(qrError.message);
     return asset;
+  });
+
+export const createTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => transferSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const membership = await getMembership(context.supabase, context.userId);
+    if (!membership) throw new Error("Workspace not found");
+    if (!transferRoles.has(membership.role)) throw new Error("You do not have permission to create transfers");
+
+    const [{ data: asset, error: assetError }, { data: location, error: locationError }] = await Promise.all([
+      context.supabase.from("assets").select("id,location_id,assigned_employee_id").eq("id", data.assetId).eq("organization_id", membership.organization_id).single(),
+      context.supabase.from("locations").select("id").eq("id", data.toLocationId).eq("organization_id", membership.organization_id).single(),
+    ]);
+    if (assetError || !asset) throw new Error("Asset not found in this workspace");
+    if (locationError || !location) throw new Error("Destination location not found");
+    if (asset.location_id === data.toLocationId && (asset.assigned_employee_id ?? null) === (data.toEmployeeId ?? null)) throw new Error("Choose a different location or custodian");
+    if (data.toEmployeeId) {
+      const { data: employee, error: employeeError } = await context.supabase.from("employees").select("id").eq("id", data.toEmployeeId).eq("organization_id", membership.organization_id).single();
+      if (employeeError || !employee) throw new Error("Custodian not found in this workspace");
+    }
+    const { data: existing } = await context.supabase.from("asset_transfers").select("id").eq("asset_id", data.assetId).in("status", ["pending", "approved"]).limit(1).maybeSingle();
+    if (existing) throw new Error("This asset already has an open transfer");
+
+    const { data: transfer, error } = await context.supabase.from("asset_transfers").insert({
+      organization_id: membership.organization_id,
+      asset_id: data.assetId,
+      from_location_id: asset.location_id,
+      to_location_id: data.toLocationId,
+      from_employee_id: asset.assigned_employee_id,
+      to_employee_id: data.toEmployeeId ?? null,
+      transfer_date: data.transferDate,
+      reason: data.reason,
+      remarks: data.remarks || null,
+      status: "pending",
+      created_by: context.userId,
+    }).select("id,status").single();
+    if (error) throw new Error(error.message);
+    return transfer;
+  });
+
+export const processTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ transferId: z.string().uuid(), action: z.enum(["approve", "reject", "complete"]) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const membership = await getMembership(context.supabase, context.userId);
+    if (!membership || !transferRoles.has(membership.role)) throw new Error("You do not have permission to process transfers");
+    const { data: status, error } = await context.supabase.rpc("process_asset_transfer", { _transfer_id: data.transferId, _action: data.action });
+    if (error) throw new Error(error.message);
+    return { status };
   });
 
 export const getPublicAsset = createServerFn({ method: "GET" })
