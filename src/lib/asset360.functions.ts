@@ -18,6 +18,7 @@ const assetSchema = z.object({
   employeeId: z.string().uuid().optional(),
   purchaseValue: z.number().nonnegative().max(999999999999).optional(),
   currentValue: z.number().nonnegative().max(999999999999).optional(),
+  installationDate: z.string().date().optional(),
   warrantyEnd: z.string().date().optional(),
   remarks: z.string().trim().max(1000).optional(),
 });
@@ -83,6 +84,7 @@ export const bootstrapWorkspace = createServerFn({ method: "POST" })
         serial_number: `SN-${organizationId.slice(0, 4).toUpperCase()}-${String(10000 + index)}`,
         purchase_value: 18000 + index * 3750, current_value: 12000 + index * 2500,
         status: statuses[index % statuses.length] ?? "active", condition: conditions[index % conditions.length] ?? "good", company: "Sharvi Infotech", criticality: index % 8 === 0 ? "high" : "medium",
+        capitalization_date: new Date(Date.now() - (90 + index * 47) * 86400000).toISOString().slice(0, 10),
         warranty_end: new Date(Date.now() + (index - 20) * 86400000 * 10).toISOString().slice(0, 10), created_by: context.userId,
       };
     });
@@ -102,7 +104,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
     const [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),
       context.supabase.from("profiles").select("full_name,job_title,avatar_url").eq("id", context.userId).maybeSingle(),
-      context.supabase.from("assets").select("id,asset_id,name,manufacturer,model,serial_number,status,condition,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
+      context.supabase.from("assets").select("id,asset_id,name,manufacturer,model,serial_number,status,condition,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
       context.supabase.from("asset_categories").select("id,name,prefix").eq("organization_id", organizationId).order("name"),
       context.supabase.from("locations").select("id,name,type,code").eq("organization_id", organizationId).order("name"),
       context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name"),
@@ -126,7 +128,7 @@ export const createAsset = createServerFn({ method: "POST" })
     if (categoryError) throw new Error(categoryError.message);
     const { count } = await context.supabase.from("assets").select("id", { count: "exact", head: true }).eq("organization_id", membership.organization_id).eq("category_id", data.categoryId);
     const assetId = `${category.prefix}-${String((count ?? 0) + 1).padStart(6, "0")}`;
-    const { data: asset, error } = await context.supabase.from("assets").insert({ organization_id: membership.organization_id, asset_id: assetId, name: data.name, category_id: data.categoryId, serial_number: data.serialNumber || null, manufacturer: data.manufacturer || null, model: data.model || null, status: data.status, condition: data.condition, location_id: data.locationId || null, department_id: data.departmentId || null, assigned_employee_id: data.employeeId || null, purchase_value: data.purchaseValue ?? null, current_value: data.currentValue ?? null, warranty_end: data.warrantyEnd ?? null, remarks: data.remarks || null, created_by: context.userId, updated_by: context.userId }).select("id,asset_id").single();
+    const { data: asset, error } = await context.supabase.from("assets").insert({ organization_id: membership.organization_id, asset_id: assetId, name: data.name, category_id: data.categoryId, serial_number: data.serialNumber || null, manufacturer: data.manufacturer || null, model: data.model || null, status: data.status, condition: data.condition, location_id: data.locationId || null, department_id: data.departmentId || null, assigned_employee_id: data.employeeId || null, purchase_value: data.purchaseValue ?? null, current_value: data.currentValue ?? null, capitalization_date: data.installationDate ?? null, warranty_end: data.warrantyEnd ?? null, remarks: data.remarks || null, created_by: context.userId, updated_by: context.userId }).select("id,asset_id").single();
     if (error) throw new Error(error.message);
     const { error: qrError } = await context.supabase.from("asset_qr_codes").insert({ organization_id: membership.organization_id, asset_id: asset.id, generated_by: context.userId });
     if (qrError) throw new Error(qrError.message);
