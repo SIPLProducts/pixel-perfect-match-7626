@@ -10,4 +10,5 @@
 - [x] Add guarded offline support for published installs
 - [x] Validate database security, dependency exposure, and signed-out responsive behavior
 - [x] Add asset cost, installation-age, and active/inactive dashboard reporting
+- [x] Add category, location, status, and installation-age dashboard filters
 - [ ] Validate signed-in onboarding and asset workflows — blocked until the first account is confirmed
