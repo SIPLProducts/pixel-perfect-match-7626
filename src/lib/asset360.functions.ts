@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -58,12 +59,12 @@ export const bootstrapWorkspace = createServerFn({ method: "POST" })
     const { data: locations, error: locationError } = await supabaseAdmin.from("locations").insert(locationRows).select("id,name");
     if (locationError || !locations) throw new Error(locationError?.message ?? "Could not create locations");
 
-    const departmentRows = ["Finance", "Information Technology", "Facilities", "Operations", "Human Resources"].map((name, index) => ({ organization_id: organizationId, code: `D${String(index + 1).padStart(2, "0")}`, name, location_id: locations[index % locations.length]?.id }));
+    const departmentRows = ["Finance", "Information Technology", "Facilities", "Operations", "Human Resources"].map((name, index) => ({ organization_id: organizationId, code: `D${String(index + 1).padStart(2, "0")}`, name, location_id: locations[index % locations.length]?.id ?? null }));
     const { data: departments, error: departmentError } = await supabaseAdmin.from("departments").insert(departmentRows).select("id,name");
     if (departmentError || !departments) throw new Error(departmentError?.message ?? "Could not create departments");
 
     const employeeNames = ["Aarav Mehta", "Meera Rao", "Devraj Sen", "Priya Nair", "Kiran Patel", "Ananya Iyer", "Ravi Kumar", "Sana Khan", "Arjun Das", "Neha Gupta", "Vikram Singh", "Ishita Shah"];
-    const { data: employees, error: employeeError } = await supabaseAdmin.from("employees").insert(employeeNames.map((full_name, index) => ({ organization_id: organizationId, employee_code: `EMP-${String(index + 1).padStart(4, "0")}`, full_name, email: `${full_name.toLowerCase().replaceAll(" ", ".")}@sharvi.demo`, designation: index % 3 === 0 ? "Manager" : "Specialist", department_id: departments[index % departments.length]?.id, location_id: locations[index % locations.length]?.id }))).select("id");
+    const { data: employees, error: employeeError } = await supabaseAdmin.from("employees").insert(employeeNames.map((full_name, index) => ({ organization_id: organizationId, employee_code: `EMP-${String(index + 1).padStart(4, "0")}`, full_name, email: `${full_name.toLowerCase().replaceAll(" ", ".")}@sharvi.demo`, designation: index % 3 === 0 ? "Manager" : "Specialist", department_id: departments[index % departments.length]?.id ?? null, location_id: locations[index % locations.length]?.id ?? null }))).select("id");
     if (employeeError || !employees) throw new Error(employeeError?.message ?? "Could not create employees");
 
     const statuses = ["active", "assigned", "under_maintenance", "active", "active", "missing", "in_stock"] as const;
@@ -72,16 +73,16 @@ export const bootstrapWorkspace = createServerFn({ method: "POST" })
       const category = categories[index % categories.length];
       return {
         organization_id: organizationId,
-        category_id: category?.id,
-        location_id: locations[index % locations.length]?.id,
-        department_id: departments[index % departments.length]?.id,
-        assigned_employee_id: index % 3 === 0 ? employees[index % employees.length]?.id : null,
+        category_id: category?.id ?? null,
+        location_id: locations[index % locations.length]?.id ?? null,
+        department_id: departments[index % departments.length]?.id ?? null,
+        assigned_employee_id: index % 3 === 0 ? employees[index % employees.length]?.id ?? null : null,
         asset_id: `${category?.prefix}-${String(index + 1).padStart(6, "0")}`,
         name: `${category?.name ?? "Asset"} ${String(index + 1).padStart(2, "0")}`,
         manufacturer: ["Dell", "HP", "Daikin", "Godrej", "Cisco"][index % 5], model: `M-${2020 + (index % 7)}-${index + 11}`,
         serial_number: `SN-${organizationId.slice(0, 4).toUpperCase()}-${String(10000 + index)}`,
         purchase_value: 18000 + index * 3750, current_value: 12000 + index * 2500,
-        status: statuses[index % statuses.length], condition: conditions[index % conditions.length], company: "Sharvi Infotech", criticality: index % 8 === 0 ? "high" : "medium",
+        status: statuses[index % statuses.length] ?? "active", condition: conditions[index % conditions.length] ?? "good", company: "Sharvi Infotech", criticality: index % 8 === 0 ? "high" : "medium",
         warranty_end: new Date(Date.now() + (index - 20) * 86400000 * 10).toISOString().slice(0, 10), created_by: context.userId,
       };
     });
@@ -101,7 +102,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
     const [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),
       context.supabase.from("profiles").select("full_name,job_title,avatar_url").eq("id", context.userId).maybeSingle(),
-      context.supabase.from("assets").select("id,asset_id,name,manufacturer,model,serial_number,status,condition,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
+      context.supabase.from("assets").select("id,asset_id,name,manufacturer,model,serial_number,status,condition,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
       context.supabase.from("asset_categories").select("id,name,prefix").eq("organization_id", organizationId).order("name"),
       context.supabase.from("locations").select("id,name,type,code").eq("organization_id", organizationId).order("name"),
       context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name"),
@@ -129,5 +130,17 @@ export const createAsset = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const { error: qrError } = await context.supabase.from("asset_qr_codes").insert({ organization_id: membership.organization_id, asset_id: asset.id, generated_by: context.userId });
     if (qrError) throw new Error(qrError.message);
+    return asset;
+  });
+
+export const getPublicAsset = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ token: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const url = process.env["SUPABASE_URL"];
+    const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+    if (!url || !key) throw new Error("Public asset verification is unavailable");
+    const client = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
+    const { data: asset, error } = await client.rpc("get_public_asset", { _token: data.token }).maybeSingle();
+    if (error) throw new Error(error.message);
     return asset;
   });
