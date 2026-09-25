@@ -1077,6 +1077,18 @@ export type Database = {
           status: Database["public"]["Enums"]["asset_status"]
         }[]
       }
+      get_public_asset_details: {
+        Args: { _token: string }
+        Returns: {
+          asset_id: string
+          asset_name: string
+          capitalization_year: number
+          company: string
+          cost_center: string
+          equipment_model: string
+          plant: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

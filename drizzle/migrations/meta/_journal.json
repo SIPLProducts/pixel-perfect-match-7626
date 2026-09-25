@@ -29,6 +29,13 @@
       "when": 1790329249455,
       "tag": "0003_add_asset_company_code",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790329422664,
+      "tag": "0004_add_public_qr_asset_details",
+      "breakpoints": true
     }
   ]
 }
