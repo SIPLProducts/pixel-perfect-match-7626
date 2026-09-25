@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import QRCode from "qrcode";
 import avatar from "@/assets/operations-manager.jpg";
 import { bootstrapWorkspace, createAsset, getWorkspaceData } from "@/lib/asset360.functions";
+import { exportDashboardCsv, exportDashboardPdf, type DashboardReport } from "@/lib/dashboard-export";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,11 +94,16 @@ function Dashboard({data,setActive,onAsset}:{data:WorkspaceData;setActive:(s:str
   const ageData=[{name:"< 1 year",value:ages.filter(x=>x<12).length},{name:"1–3 years",value:ages.filter(x=>x>=12&&x<36).length},{name:"3–5 years",value:ages.filter(x=>x>=36&&x<60).length},{name:"5+ years",value:ages.filter(x=>x>=60).length}];
   const statusData=[{name:"Active",value:active,fill:"var(--success)"},{name:"Inactive",value:inactive,fill:"var(--destructive)"}];
   const resetFilters=()=>{setCategory("all");setLocation("all");setStatus("all");setAge("all")};
+  const report=():DashboardReport=>{
+    const selectedFilters=[category==="all"?"All categories":`Category: ${category}`,location==="all"?"All locations":`Location: ${location}`,status==="all"?"All statuses":`Status: ${pretty(status)}`,age==="all"?"All installation ages":`Installation age: ${age==="under-1"?"Under 1 year":age==="5-plus"?"5+ years":`${age} years`}`];
+    return {organization:data.organization?.name??"Organization",generatedAt:new Intl.DateTimeFormat("en-IN",{dateStyle:"medium",timeStyle:"short"}).format(new Date()),filters:selectedFilters,metrics:[["Total assets",String(total)],["Total acquisition cost",money.format(purchaseCost)],["Current value",money.format(currentValue)],["Average equipment life",formatAge(averageAge)],["Active / inactive",`${active} / ${inactive}`]],ageProfile:ageData.map(item=>[item.name,item.value]),statusProfile:statusData.map(item=>[item.name,item.value]),attention:[["Inactive assets",inactive],["Maintenance due",maintenance],["Warranties expiring",warranties],["Pending verification",Math.max(0,total-verifiedCount)]],assets:filteredAssets.map(asset=>[asset.asset_id,asset.name,asset.asset_categories?.name??"—",asset.locations?.name??"—",asset.employees?.full_name??"—",formatDate(assetStartDate(asset)),formatAge(assetAgeMonths(asset)),pretty(asset.status),money.format(Number(asset.purchase_value??0)),money.format(Number(asset.current_value??0))])};
+  };
+  const runExport=(format:"csv"|"pdf")=>{if(!total){toast.error("No filtered assets to export");return}const current=report();if(format==="csv"){exportDashboardCsv(current);toast.success("Filtered dashboard CSV exported");return}exportDashboardPdf(current).then(()=>toast.success("Filtered dashboard PDF exported")).catch(()=>toast.error("Could not create the PDF report"))};
   return <div className="space-y-5 soft-enter">
     <section className="glass-panel p-4 sm:p-5" aria-label="Dashboard filters">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
         <div className="flex min-w-0 items-center gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Filter className="size-4"/></span><div className="min-w-0"><h2 className="truncate font-display text-sm font-bold">Dashboard filters</h2><p className="truncate text-xs text-muted-foreground">Showing {total} of {data.assets.length} assets</p></div></div>
-        <Button variant="ghost" size="sm" onClick={resetFilters} disabled={!hasFilters}><X className="size-4"/>Reset</Button>
+        <div className="flex items-center gap-1"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="glass" size="sm" disabled={!total}><Download className="size-4"/>Export</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Filtered dashboard</DropdownMenuLabel><DropdownMenuItem onClick={()=>runExport("csv")}><FileSpreadsheet/>Export CSV</DropdownMenuItem><DropdownMenuItem onClick={()=>runExport("pdf")}><Download/>Export PDF</DropdownMenuItem></DropdownMenuContent></DropdownMenu><Button variant="ghost" size="sm" onClick={resetFilters} disabled={!hasFilters}><X className="size-4"/>Reset</Button></div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Select value={category} onValueChange={setCategory}><SelectTrigger className="w-full bg-glass-strong" aria-label="Filter by category"><SelectValue placeholder="All categories"/></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{data.categories.map(item=><SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>)}</SelectContent></Select>
