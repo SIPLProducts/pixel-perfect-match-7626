@@ -12,4 +12,5 @@
 - [x] Add asset cost, installation-age, and active/inactive dashboard reporting
 - [x] Add category, location, status, and installation-age dashboard filters
 - [x] Export filtered dashboard figures, chart summaries, and asset list to CSV or PDF
+- [x] Enable asset transfer creation, approval, rejection, completion, and tracking
 - [ ] Validate signed-in onboarding and asset workflows — blocked until the first account is confirmed
