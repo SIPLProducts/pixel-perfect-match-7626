@@ -79,7 +79,7 @@ export const bootstrapWorkspace = createServerFn({ method: "POST" })
         assigned_employee_id: index % 3 === 0 ? employees[index % employees.length]?.id ?? null : null,
         asset_id: `${category?.prefix}-${String(index + 1).padStart(6, "0")}`,
         name: `${category?.name ?? "Asset"} ${String(index + 1).padStart(2, "0")}`,
-        manufacturer: ["Dell", "HP", "Daikin", "Godrej", "Cisco"][index % 5], model: `M-${2020 + (index % 7)}-${index + 11}`,
+        manufacturer: ["Dell", "HP", "Daikin", "Godrej", "Cisco"][index % 5] ?? "Sharvi", model: `M-${2020 + (index % 7)}-${index + 11}`,
         serial_number: `SN-${organizationId.slice(0, 4).toUpperCase()}-${String(10000 + index)}`,
         purchase_value: 18000 + index * 3750, current_value: 12000 + index * 2500,
         status: statuses[index % statuses.length] ?? "active", condition: conditions[index % conditions.length] ?? "good", company: "Sharvi Infotech", criticality: index % 8 === 0 ? "high" : "medium",

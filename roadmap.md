@@ -3,9 +3,10 @@
 - [x] Approve product and design direction
 - [x] Connect Lovable Cloud and configure secure sign-in
 - [x] Create tenant-isolated core data model
-- [ ] Build authentication and onboarding
-- [ ] Build responsive workspace and dashboard
-- [ ] Build asset and QR workflows
-- [ ] Build lifecycle modules and reports
-- [ ] Add published offline support
-- [ ] Validate security and responsive behavior
+- [x] Build authentication and onboarding
+- [x] Build responsive workspace and dashboard
+- [x] Build asset registration, secure QR generation, scanning, and public verification
+- [x] Add lifecycle overview modules and downloadable reports
+- [x] Add guarded offline support for published installs
+- [x] Validate database security, dependency exposure, and signed-out responsive behavior
+- [ ] Validate signed-in onboarding and asset workflows — blocked until the first account is confirmed

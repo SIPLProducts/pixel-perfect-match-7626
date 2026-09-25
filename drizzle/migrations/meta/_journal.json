@@ -8,6 +8,13 @@
       "when": 1790324757946,
       "tag": "0000_create_asset360_core",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790327346616,
+      "tag": "0001_tighten_workspace_creation_and_function_access",
+      "breakpoints": true
     }
   ]
 }
