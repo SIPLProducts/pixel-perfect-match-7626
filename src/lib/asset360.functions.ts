@@ -205,7 +205,7 @@ export const getPublicAsset = createServerFn({ method: "GET" })
     const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
     if (!url || !key) throw new Error("Public asset verification is unavailable");
     const client = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
-    const { data: asset, error } = await client.rpc("get_public_asset", { _token: data.token }).maybeSingle();
+    const { data: asset, error } = await client.rpc("get_public_asset_details", { _token: data.token }).maybeSingle();
     if (error) throw new Error(error.message);
     return asset;
   });
