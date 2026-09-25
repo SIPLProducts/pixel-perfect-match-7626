@@ -15,6 +15,13 @@
       "when": 1790327346616,
       "tag": "0001_tighten_workspace_creation_and_function_access",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790329032076,
+      "tag": "0002_add_secure_transfer_workflow",
+      "breakpoints": true
     }
   ]
 }
