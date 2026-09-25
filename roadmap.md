@@ -13,4 +13,5 @@
 - [x] Add category, location, status, and installation-age dashboard filters
 - [x] Export filtered dashboard figures, chart summaries, and asset list to CSV or PDF
 - [x] Enable asset transfer creation, approval, rejection, completion, and tracking
+- [x] Add serial, plant, company code, acquisition/book values, and filters to the Asset register
 - [ ] Validate signed-in onboarding and asset workflows — blocked until the first account is confirmed

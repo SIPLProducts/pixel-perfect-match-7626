@@ -415,6 +415,7 @@ export type Database = {
           capitalization_date: string | null
           category_id: string | null
           company: string | null
+          company_code: string | null
           condition: Database["public"]["Enums"]["asset_condition"]
           cost_center: string | null
           created_at: string
@@ -456,6 +457,7 @@ export type Database = {
           capitalization_date?: string | null
           category_id?: string | null
           company?: string | null
+          company_code?: string | null
           condition?: Database["public"]["Enums"]["asset_condition"]
           cost_center?: string | null
           created_at?: string
@@ -497,6 +499,7 @@ export type Database = {
           capitalization_date?: string | null
           category_id?: string | null
           company?: string | null
+          company_code?: string | null
           condition?: Database["public"]["Enums"]["asset_condition"]
           cost_center?: string | null
           created_at?: string
