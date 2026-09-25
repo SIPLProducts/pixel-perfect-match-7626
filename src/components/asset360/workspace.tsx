@@ -76,7 +76,7 @@ function Dashboard({data,setActive,onAsset}:{data:WorkspaceData;setActive:(s:str
     const months=assetAgeMonths(asset);
     const statusMatches=status==="all"||(status==="active"?activeStatuses.has(asset.status):!activeStatuses.has(asset.status));
     const ageMatches=age==="all"||(age==="under-1"&&months<12)||(age==="1-3"&&months>=12&&months<36)||(age==="3-5"&&months>=36&&months<60)||(age==="5-plus"&&months>=60);
-    return (category==="all"||asset.category_id===category)&&(location==="all"||asset.location_id===location)&&statusMatches&&ageMatches;
+    return (category==="all"||asset.asset_categories?.name===category)&&(location==="all"||asset.locations?.name===location)&&statusMatches&&ageMatches;
   }),[age,category,data.assets,location,status]);
   const hasFilters=category!=="all"||location!=="all"||status!=="all"||age!=="all";
   const total=filteredAssets.length;
@@ -86,8 +86,8 @@ function Dashboard({data,setActive,onAsset}:{data:WorkspaceData;setActive:(s:str
   const inactive=total-active;
   const maintenance=filteredAssets.filter(a=>["under_maintenance","under_repair"].includes(a.status)).length;
   const warranties=filteredAssets.filter(a=>a.warranty_end&&new Date(a.warranty_end)<new Date(Date.now()+90*86400000)&&new Date(a.warranty_end)>=new Date()).length;
-  const filteredIds=new Set(filteredAssets.map(asset=>asset.id));
-  const verifiedCount=new Set(data.verifications.filter(item=>filteredIds.has(item.asset_id)).map(item=>item.asset_id)).size;
+  const filteredAssetCodes=new Set(filteredAssets.map(asset=>asset.asset_id));
+  const verifiedCount=new Set(data.verifications.filter(item=>filteredAssetCodes.has(item.assets.asset_id)).map(item=>item.assets.asset_id)).size;
   const ages=filteredAssets.map(assetAgeMonths);
   const averageAge=ages.length?Math.round(ages.reduce((sum,item)=>sum+item,0)/ages.length):0;
   const ageData=[{name:"< 1 year",value:ages.filter(x=>x<12).length},{name:"1–3 years",value:ages.filter(x=>x>=12&&x<36).length},{name:"3–5 years",value:ages.filter(x=>x>=36&&x<60).length},{name:"5+ years",value:ages.filter(x=>x>=60).length}];
@@ -100,8 +100,8 @@ function Dashboard({data,setActive,onAsset}:{data:WorkspaceData;setActive:(s:str
         <Button variant="ghost" size="sm" onClick={resetFilters} disabled={!hasFilters}><X className="size-4"/>Reset</Button>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Select value={category} onValueChange={setCategory}><SelectTrigger className="w-full bg-glass-strong" aria-label="Filter by category"><SelectValue placeholder="All categories"/></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{data.categories.map(item=><SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select>
-        <Select value={location} onValueChange={setLocation}><SelectTrigger className="w-full bg-glass-strong" aria-label="Filter by location"><SelectValue placeholder="All locations"/></SelectTrigger><SelectContent><SelectItem value="all">All locations</SelectItem>{data.locations.map(item=><SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select>
+        <Select value={category} onValueChange={setCategory}><SelectTrigger className="w-full bg-glass-strong" aria-label="Filter by category"><SelectValue placeholder="All categories"/></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{data.categories.map(item=><SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>)}</SelectContent></Select>
+        <Select value={location} onValueChange={setLocation}><SelectTrigger className="w-full bg-glass-strong" aria-label="Filter by location"><SelectValue placeholder="All locations"/></SelectTrigger><SelectContent><SelectItem value="all">All locations</SelectItem>{data.locations.map(item=><SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>)}</SelectContent></Select>
         <Select value={status} onValueChange={setStatus}><SelectTrigger className="w-full bg-glass-strong" aria-label="Filter by status"><SelectValue placeholder="All statuses"/></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select>
         <Select value={age} onValueChange={setAge}><SelectTrigger className="w-full bg-glass-strong" aria-label="Filter by installation age"><SelectValue placeholder="All installation ages"/></SelectTrigger><SelectContent><SelectItem value="all">All installation ages</SelectItem><SelectItem value="under-1">Under 1 year</SelectItem><SelectItem value="1-3">1–3 years</SelectItem><SelectItem value="3-5">3–5 years</SelectItem><SelectItem value="5-plus">5+ years</SelectItem></SelectContent></Select>
       </div>
