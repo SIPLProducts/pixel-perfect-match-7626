@@ -16,4 +16,7 @@
 - [x] Add serial, plant, company code, acquisition/book values, and filters to the Asset register
 - [x] Show plant, cost center, equipment, and capitalization year on public QR pages
 - [x] Redesign the enterprise login screen and verify its controls
+- [ ] Review and complete equipment QR-label workflows screen by screen — awaiting the user's next screen selection
+- [ ] Review standalone and SAP/other ERP connection screens — awaiting screen-by-screen requirements and integration access
+- [ ] Review user management, settings, support, and help screens — awaiting screen-by-screen requirements
 - [ ] Validate signed-in onboarding and asset workflows — blocked until the first account is confirmed
