@@ -5,7 +5,7 @@ import { readAllRows } from "./read-all-rows";
 
 test("asset, service and reference updates subscribe only to the active organization", () => {
   const subscriptions = workspaceSubscriptions("org-a", "user-a");
-  for (const table of ["asset_qr_prints", "asset_attachments", "assets", "asset_qr_codes", "asset_categories", "maintenance_requests", "asset_transfers", "asset_events", "locations", "employees", "integrations"]) {
+  for (const table of ["cars", "car_messages", "asset_qr_prints", "asset_attachments", "assets", "asset_qr_codes", "asset_categories", "maintenance_requests", "asset_transfers", "asset_events", "locations", "employees", "integrations"]) {
     assert.equal(subscriptions.find(item => item.table === table)?.filter, "organization_id=eq.org-a");
   }
   assert.equal(subscriptions.find(item => item.table === "profiles")?.filter, "id=eq.user-a");

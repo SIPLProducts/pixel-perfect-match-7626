@@ -27,3 +27,5 @@
 - Use one inline transfer form with shared validation; transfer edits lock the existing row, enforce tenant manager permissions and updated_at, preserve the asset and origin, reset approval, and record an asset event atomically.
 - Render the transfer register and per-asset history from the live tenant-filtered workspace data; resolve initiators from tenant-scoped profiles and keep completion routed through the existing assignment transaction.
 - Derive latest-transfer columns in the Asset register from the shared live transfer records; keep current location and custodian sourced from the asset row so pending movements never appear completed.
+- Keep car records and phone numbers tenant-private; public car QR functions return only safe contact fields and write token-derived parking messages, while stable QR identities and concurrency checks protect car edits.
+- QRmyCAR uses its own protected content route and the shared workspace cache and subscriptions; public car contact remains a separate shareable route without direct phone links until a private relay is connected.

@@ -113,6 +113,11 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       readAllRows((from, to) => context.supabase.from("profiles").select("id,full_name").eq("organization_id", organizationId).order("id").range(from, to)),
     ]);
     const printCounts = qrPrintCounts(prints.data ?? []);
+    const [cars, carMessages] = await Promise.all([
+      readAllRows((from, to) => context.supabase.from("cars").select("*").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("car_messages").select("id,car_id,reason,message,status,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+    ]);
+    if (cars.error || carMessages.error) throw new Error("Car records could not be loaded");
     const printHistory = qrPrintHistory(prints.data ?? [], printUsers.data ?? []);
     const firstError = [prints, printUsers, attachments, organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications, events].find((result) => result.error)?.error;
     if (firstError) throw new Error(firstError.message);
@@ -124,7 +129,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       }));
       serviceRequests.push(...batch);
     }
-    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, workspaceUsers: printUsers.data ?? [], qrPrintHistory: printHistory, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0 })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
+    return { needsOnboarding: false as const, cars: cars.data ?? [], carMessages: carMessages.data ?? [], organization: organization.data, profile: profile.data, role: membership.role, workspaceUsers: printUsers.data ?? [], qrPrintHistory: printHistory, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0 })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
   });
 
 export const recordQrPrints = createServerFn({ method: "POST" })

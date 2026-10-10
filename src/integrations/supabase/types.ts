@@ -733,6 +733,109 @@ export type Database = {
           },
         ]
       }
+      car_messages: {
+        Row: {
+          car_id: string
+          created_at: string
+          id: string
+          message: string
+          organization_id: string
+          reason: string
+          status: string
+        }
+        Insert: {
+          car_id: string
+          created_at?: string
+          id?: string
+          message?: string
+          organization_id: string
+          reason: string
+          status?: string
+        }
+        Update: {
+          car_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          organization_id?: string
+          reason?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_messages_car_id_organization_id_fkey"
+            columns: ["car_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      cars: {
+        Row: {
+          active: boolean
+          color: string
+          created_at: string
+          created_by: string
+          id: string
+          make: string
+          manufacture_year: number | null
+          model: string
+          organization_id: string
+          owner_mobile: string
+          owner_name: string
+          parking_slot: string
+          qr_token: string
+          registration_number: string
+          remarks: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          make: string
+          manufacture_year?: number | null
+          model: string
+          organization_id: string
+          owner_mobile: string
+          owner_name: string
+          parking_slot?: string
+          qr_token?: string
+          registration_number: string
+          remarks?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          make?: string
+          manufacture_year?: number | null
+          model?: string
+          organization_id?: string
+          owner_mobile?: string
+          owner_name?: string
+          parking_slot?: string
+          qr_token?: string
+          registration_number?: string
+          remarks?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cars_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           code: string
@@ -1269,6 +1372,17 @@ export type Database = {
           plant: string
         }[]
       }
+      get_public_car: {
+        Args: { _token: string }
+        Returns: {
+          color: string
+          make: string
+          mobile_masked: string
+          model: string
+          owner_name: string
+          registration_number: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1288,6 +1402,10 @@ export type Database = {
       record_asset_qr_prints: {
         Args: { _action: string; _asset_ids: string[]; _operation_id: string }
         Returns: number
+      }
+      submit_car_message: {
+        Args: { _message?: string; _reason: string; _token: string }
+        Returns: string
       }
       submit_qr_breakdown: {
         Args: {
