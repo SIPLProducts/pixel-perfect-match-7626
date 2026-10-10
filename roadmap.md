@@ -21,5 +21,5 @@
 - [ ] Review standalone and SAP/other ERP connection screens — awaiting screen-by-screen requirements and integration access
 - [ ] Review user management, settings, support, and help screens — awaiting screen-by-screen requirements
 - [x] Validate signed-in asset selection and QR-label PDF download
-- [ ] Build and verify inline Add asset and Edit asset screens
+- [x] Build and verify inline Add asset and Edit asset screens
 - [ ] Validate remaining onboarding and lifecycle workflows — awaiting their screen-by-screen review
