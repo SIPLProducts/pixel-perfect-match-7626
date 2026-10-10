@@ -1,7 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Workspace } from "@/components/asset360/workspace";
+import { workspaceQueryOptions } from "@/lib/workspace-query";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  loader: async ({ context }) => { await context.queryClient.ensureQueryData(workspaceQueryOptions(context.user.id)); },
+  pendingComponent: () => <main className="grid min-h-screen place-items-center bg-background text-muted-foreground">Preparing your workspace…</main>,
+  errorComponent: WorkspaceError,
+  notFoundComponent: () => <main className="p-8">Workspace not found.</main>,
   head: () => ({ meta: [
     { title: "Operations Dashboard | Sharvi Asset360" },
     { name: "description", content: "Monitor assets, value, assignments, maintenance, and verification activity." },
@@ -12,3 +19,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   ] }),
   component: Workspace,
 });
+
+function WorkspaceError() {
+  const router = useRouter();
+  return <main className="grid min-h-screen place-items-center bg-background"><div className="space-y-4 text-center"><h1 className="text-xl font-semibold">Workspace unavailable</h1><Button onClick={() => { void router.invalidate(); }}>Try again</Button></div></main>;
+}

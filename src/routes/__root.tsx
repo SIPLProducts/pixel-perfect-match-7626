@@ -131,6 +131,7 @@ function RootComponent() {
     import("@/lib/pwa").then(({ registerAsset360ServiceWorker }) => registerAsset360ServiceWorker());
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      if (event === "SIGNED_OUT") queryClient.removeQueries({ queryKey: ["workspace"] });
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
