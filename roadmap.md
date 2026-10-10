@@ -1,7 +1,7 @@
 # Sharvi Asset360 roadmap
 
-- [ ] Add QRmyCAR creation, editing, list, persistent QR labels and private parking-message inbox
-- [ ] Verify car identity, public phone privacy and saved edits
+- [x] Add QRmyCAR creation, editing, list, persistent QR labels and private parking-message inbox
+- [x] Verify car identity, public phone privacy and saved edits
 - [ ] Enable private calls and WhatsApp — blocked on choosing and connecting a relay service
 
 - [x] Add inline transfer creation and editing with safe status actions
