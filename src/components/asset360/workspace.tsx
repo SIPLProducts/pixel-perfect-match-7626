@@ -6,6 +6,7 @@ import { Activity, Pencil, Archive, ArrowRightLeft, Bell, Boxes, Building2, Cale
 import { toast } from "sonner";
 import { AssetForm } from "@/components/asset360/asset-form";
 import { AssetImport } from "@/components/asset360/asset-import";
+import { ServiceRequests } from "@/components/asset360/service-requests";
 import { LabelDialog } from "@/components/asset360/label-dialog";
 import { bootstrapWorkspace, createTransfer, getWorkspaceData, processTransfer } from "@/lib/asset360.functions";
 import { exportDashboardCsv, exportDashboardPdf, type DashboardReport } from "@/lib/dashboard-export";
@@ -30,7 +31,7 @@ const assetAgeMonths = (asset: Asset) => Math.max(0, Math.floor((Date.now() - ne
 const formatAge = (months: number) => months < 12 ? `${months} mo` : `${Math.floor(months / 12)} yr${Math.floor(months / 12)===1?"":"s"} ${months % 12} mo`;
 const formatDate = (value: string) => new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 const nav = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard }, { id: "assets", label: "Assets", icon: Boxes, count: 54 }, { id: "transfers", label: "Transfers", icon: ArrowRightLeft, count: 3 }, { id: "maintenance", label: "Maintenance", icon: Wrench }, { id: "verification", label: "Verification", icon: ClipboardCheck },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard }, { id: "assets", label: "Assets", icon: Boxes, count: 54 }, { id: "transfers", label: "Transfers", icon: ArrowRightLeft, count: 3 }, { id: "maintenance", label: "Service requests", icon: Wrench }, { id: "verification", label: "Verification", icon: ClipboardCheck },
   { id: "categories", label: "Categories", icon: Archive }, { id: "locations", label: "Locations", icon: Building2 }, { id: "employees", label: "Employees", icon: Users }, { id: "reports", label: "Reports", icon: FileSpreadsheet }, { id: "audit", label: "Audit trail", icon: History }, { id: "settings", label: "Settings", icon: Settings },
 ];
 const pageCopy: Record<string, [string, string]> = { dashboard: ["Dashboard", "Your asset operations at a glance."], assets: ["Asset master", "Search, filter, and manage every registered asset."], transfers: ["Asset transfers", "Track handovers and approval status."], maintenance: ["Maintenance", "Plan service and reduce avoidable downtime."], verification: ["Verification", "Reconcile physical assets with your register."], categories: ["Asset categories", "Manage identification prefixes and classes."], locations: ["Locations", "Navigate your company’s physical hierarchy."], employees: ["Employees", "Manage custodians and ownership."], reports: ["Reports", "Export operational insights for review."], audit: ["Audit trail", "Review immutable activity across the workspace."], settings: ["Settings", "Configure your organization and integrations."] };
