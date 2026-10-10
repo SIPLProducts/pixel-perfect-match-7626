@@ -1096,6 +1096,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_asset_rows: {
+        Args: { _organization_id: string; _rows: Json }
+        Returns: number
+      }
       is_org_member: { Args: { _organization_id: string }; Returns: boolean }
       process_asset_transfer: {
         Args: { _action: string; _transfer_id: string }
