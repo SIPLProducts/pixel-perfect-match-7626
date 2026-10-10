@@ -1,15 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { Download, LoaderCircle, Printer, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { buildLabelsPdf, labelQr, labelSizes, type LabelAsset, type LabelSize } from "@/lib/asset-labels";
+import { recordQrPrints } from "@/lib/asset360.functions";
+import { deliverTrackedLabels } from "@/lib/qr-print-tracking";
 
 export function LabelDialog({ open, onOpenChange, assets, organization }: { open: boolean; onOpenChange: (value: boolean) => void; assets: LabelAsset[]; organization: string }) {
   const [size, setSize] = useState<LabelSize>("standard");
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
+  const inProgress = useRef(false);
+  const record = useServerFn(recordQrPrints);
+  const queryClient = useQueryClient();
   const ready = assets.filter(asset => asset.asset_qr_codes?.token);
   const first = ready[0];
   useEffect(() => {
@@ -18,26 +25,37 @@ export function LabelDialog({ open, onOpenChange, assets, organization }: { open
     return () => { cancelled = true; };
   }, [open, first]);
   async function exportLabels(print: boolean) {
+    if (inProgress.current || !ready.length) return;
+    if (ready.length > 500) { toast.error("Select up to 500 assets per label batch."); return; }
     // Reserve a window synchronously so browsers do not block the print action.
     const printWindow = print ? window.open("", "_blank") : null;
     if (print && !printWindow) { toast.error("Allow pop-ups to open the printable labels, or download the PDF."); return; }
     if (printWindow) printWindow.opener = null;
-    setBusy(true);
+    inProgress.current = true; setBusy(true);
     try {
       const pdf = await buildLabelsPdf(ready, size, organization);
-      if (printWindow) {
+      const operationId = crypto.randomUUID();
+      await deliverTrackedLabels(async () => { if (printWindow) {
         pdf.autoPrint();
         const url = URL.createObjectURL(pdf.output("blob"));
         printWindow.location.href = url;
         window.setTimeout(() => URL.revokeObjectURL(url), 300000);
-      } else pdf.save("Sharvi-Asset360-QR-Labels.pdf");
+      } else await pdf.save("Sharvi-Asset360-QR-Labels.pdf", { returnPromise: true }); }, () => record({ data: { operationId, assetIds: ready.map(asset => asset.id), action: print ? "print" : "pdf" } }));
+      void queryClient.invalidateQueries({ queryKey: ["workspace"] });
     } catch (error) { printWindow?.close(); toast.error(error instanceof Error ? error.message : "Could not prepare labels"); }
-    finally { setBusy(false); }
+    finally { inProgress.current = false; setBusy(false); }
   }
   async function downloadPng() {
-    if (!first) return;
-    try { const link = document.createElement("a"); link.href = await labelQr(first); link.download = `${first.asset_id}-qr.png`; link.click(); }
-    catch { toast.error("Could not download QR code"); }
+    if (!first || inProgress.current) return;
+    inProgress.current = true; setBusy(true);
+    try {
+      const link = document.createElement("a"); link.href = await labelQr(first); link.download = `${first.asset_id}-qr.png`;
+      const operationId = crypto.randomUUID();
+      await deliverTrackedLabels(() => link.click(), () => record({ data: { operationId, assetIds: [first.id], action: "png" } }));
+      void queryClient.invalidateQueries({ queryKey: ["workspace"] });
+    }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Could not download QR code"); }
+    finally { inProgress.current = false; setBusy(false); }
   }
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>QR labels</DialogTitle></DialogHeader>
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">{ready.length} {ready.length === 1 ? "asset" : "assets"} selected</p><Select value={size} onValueChange={value => setSize(value as LabelSize)}><SelectTrigger className="w-full sm:w-60" aria-label="Label size"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(labelSizes).map(([key, value]) => <SelectItem key={key} value={key}>{value.name}</SelectItem>)}</SelectContent></Select></div>
