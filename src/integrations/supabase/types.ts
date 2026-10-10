@@ -408,9 +408,12 @@ export type Database = {
       }
       assets: {
         Row: {
+          accumulated_depreciation: number | null
           asset_id: string
+          asset_subnumber: string | null
           asset_type: string | null
           assigned_employee_id: string | null
+          base_unit: string | null
           business_unit: string | null
           capitalization_date: string | null
           category_id: string | null
@@ -421,9 +424,18 @@ export type Database = {
           created_at: string
           created_by: string | null
           criticality: string
+          currency: string | null
           current_value: number | null
           department_id: string | null
+          depreciation_key: string | null
+          depreciation_start_date: string | null
           description: string | null
+          erp_location: string | null
+          erp_reference_1: string | null
+          erp_reference_2: string | null
+          erp_reference_3: string | null
+          erp_reference_4: string | null
+          external_asset_number: string | null
           floor: string | null
           id: string
           image_url: string | null
@@ -433,26 +445,38 @@ export type Database = {
           model: string | null
           name: string
           organization_id: string
+          planned_depreciation: number | null
+          planned_life: string | null
           plant: string | null
           profit_center: string | null
           purchase_date: string | null
           purchase_value: number | null
+          quantity: number | null
           remarks: string | null
           room: string | null
           serial_number: string | null
+          special_depreciation: number | null
+          starting_book_value: number | null
           status: Database["public"]["Enums"]["asset_status"]
           subcategory: string | null
           supplier: string | null
+          transaction_acquisition_value: number | null
+          transferred_accumulated_depreciation: number | null
           updated_at: string
           updated_by: string | null
           useful_life_months: number | null
           warranty_end: string | null
           warranty_start: string | null
+          wbs_element: string | null
+          write_ups: number | null
         }
         Insert: {
+          accumulated_depreciation?: number | null
           asset_id: string
+          asset_subnumber?: string | null
           asset_type?: string | null
           assigned_employee_id?: string | null
+          base_unit?: string | null
           business_unit?: string | null
           capitalization_date?: string | null
           category_id?: string | null
@@ -463,9 +487,18 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           criticality?: string
+          currency?: string | null
           current_value?: number | null
           department_id?: string | null
+          depreciation_key?: string | null
+          depreciation_start_date?: string | null
           description?: string | null
+          erp_location?: string | null
+          erp_reference_1?: string | null
+          erp_reference_2?: string | null
+          erp_reference_3?: string | null
+          erp_reference_4?: string | null
+          external_asset_number?: string | null
           floor?: string | null
           id?: string
           image_url?: string | null
@@ -475,26 +508,38 @@ export type Database = {
           model?: string | null
           name: string
           organization_id: string
+          planned_depreciation?: number | null
+          planned_life?: string | null
           plant?: string | null
           profit_center?: string | null
           purchase_date?: string | null
           purchase_value?: number | null
+          quantity?: number | null
           remarks?: string | null
           room?: string | null
           serial_number?: string | null
+          special_depreciation?: number | null
+          starting_book_value?: number | null
           status?: Database["public"]["Enums"]["asset_status"]
           subcategory?: string | null
           supplier?: string | null
+          transaction_acquisition_value?: number | null
+          transferred_accumulated_depreciation?: number | null
           updated_at?: string
           updated_by?: string | null
           useful_life_months?: number | null
           warranty_end?: string | null
           warranty_start?: string | null
+          wbs_element?: string | null
+          write_ups?: number | null
         }
         Update: {
+          accumulated_depreciation?: number | null
           asset_id?: string
+          asset_subnumber?: string | null
           asset_type?: string | null
           assigned_employee_id?: string | null
+          base_unit?: string | null
           business_unit?: string | null
           capitalization_date?: string | null
           category_id?: string | null
@@ -505,9 +550,18 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           criticality?: string
+          currency?: string | null
           current_value?: number | null
           department_id?: string | null
+          depreciation_key?: string | null
+          depreciation_start_date?: string | null
           description?: string | null
+          erp_location?: string | null
+          erp_reference_1?: string | null
+          erp_reference_2?: string | null
+          erp_reference_3?: string | null
+          erp_reference_4?: string | null
+          external_asset_number?: string | null
           floor?: string | null
           id?: string
           image_url?: string | null
@@ -517,21 +571,30 @@ export type Database = {
           model?: string | null
           name?: string
           organization_id?: string
+          planned_depreciation?: number | null
+          planned_life?: string | null
           plant?: string | null
           profit_center?: string | null
           purchase_date?: string | null
           purchase_value?: number | null
+          quantity?: number | null
           remarks?: string | null
           room?: string | null
           serial_number?: string | null
+          special_depreciation?: number | null
+          starting_book_value?: number | null
           status?: Database["public"]["Enums"]["asset_status"]
           subcategory?: string | null
           supplier?: string | null
+          transaction_acquisition_value?: number | null
+          transferred_accumulated_depreciation?: number | null
           updated_at?: string
           updated_by?: string | null
           useful_life_months?: number | null
           warranty_end?: string | null
           warranty_start?: string | null
+          wbs_element?: string | null
+          write_ups?: number | null
         }
         Relationships: [
           {

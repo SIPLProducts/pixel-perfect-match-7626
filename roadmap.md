@@ -1,5 +1,7 @@
 # Sharvi Asset360 roadmap
 
+- [x] Add all uploaded ASSET_TEST_CASE_3 fields to asset creation, editing, and display; verify saved values
+
 - [x] Enable and verify automatic tenant-scoped updates across workspace screens while preserving existing records
 
 - [x] Approve product and design direction
