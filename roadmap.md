@@ -1,5 +1,7 @@
 # Sharvi Asset360 roadmap
 
+- [ ] Align Excel template, validation, and saved imports with all Asset screen fields
+
 - [x] Make service-request editing inline and verify save and cancel
 
 - [x] Add and verify service request editing and persistent status updates
