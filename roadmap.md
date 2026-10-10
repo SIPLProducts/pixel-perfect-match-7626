@@ -15,4 +15,5 @@
 - [x] Enable asset transfer creation, approval, rejection, completion, and tracking
 - [x] Add serial, plant, company code, acquisition/book values, and filters to the Asset register
 - [x] Show plant, cost center, equipment, and capitalization year on public QR pages
+- [ ] Redesign the enterprise login screen and verify its controls
 - [ ] Validate signed-in onboarding and asset workflows — blocked until the first account is confirmed
