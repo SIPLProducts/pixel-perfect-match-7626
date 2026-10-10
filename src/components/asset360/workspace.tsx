@@ -158,6 +158,7 @@ function PageActions({active,setAssetDialog,assets,onImport,data}:{active:string
   const exportAssets=()=>{const escape=(value:unknown)=>`"${String(value??"").replaceAll('"','""')}"`;const headings=["Asset ID","Name","Serial Number","Plant","Company Code","Status","Acquisition Value","Book Value"];const rows=assets.map(a=>[a.asset_id,a.name,a.serial_number,a.plant,a.company_code,a.status,a.purchase_value,a.current_value]);const blob=new Blob([[headings,...rows].map(row=>row.map(escape).join(",")).join("\n")],{type:"text/csv;charset=utf-8"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="asset360-assets.csv";link.click();URL.revokeObjectURL(link.href);};
   if(active==="assets") return <div className="flex flex-wrap gap-2"><Button variant="glass" onClick={exportAssets}><Download/>Export</Button><Button variant="outline" onClick={downloadTemplate} disabled={downloading}>{downloading?<LoaderCircle className="animate-spin"/>:<FileSpreadsheet/>}Download Excel template</Button><Button variant="outline" onClick={onImport}><Upload/>Upload Excel</Button><Button variant="hero" onClick={()=>setAssetDialog(true)}><PackagePlus/>Add asset</Button></div>;
   if(active==="dashboard") return <Button variant="hero" onClick={()=>setAssetDialog(true)}><PackagePlus/>Add asset</Button>;
+  if(active==="transfers") return null;
   return <Button variant="glass" onClick={()=>toast.info(`${pageCopy[active]?.[0]??"This area"} is ready for organization records`)}><Download/>Export view</Button>;
 }
 
