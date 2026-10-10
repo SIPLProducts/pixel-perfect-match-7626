@@ -4,7 +4,7 @@
 
 - [x] Add QRmyCAR creation, editing, list, persistent QR labels and private parking-message inbox
 - [x] Verify car identity, public phone privacy and saved edits
-- [ ] Enable private calls and WhatsApp — blocked on choosing and connecting a relay service
+- [ ] Enable and verify direct Call and WhatsApp on active public car pages with masked display and clear number disclosure
 
 - [x] Add inline transfer creation and editing with safe status actions
 - [x] Improve the transfer register, filters, and per-asset history
