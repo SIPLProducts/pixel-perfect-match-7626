@@ -1,5 +1,7 @@
 # Sharvi Asset360 roadmap
 
+- [ ] Enable and verify automatic tenant-scoped updates across workspace screens while preserving existing records
+
 - [x] Approve product and design direction
 - [x] Connect Lovable Cloud and configure secure sign-in
 - [x] Create tenant-isolated core data model
