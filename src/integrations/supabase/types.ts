@@ -812,8 +812,10 @@ export type Database = {
           next_maintenance_date: string | null
           organization_id: string
           parts_used: string | null
+          photo_path: string | null
           remarks: string | null
           service_provider: string | null
+          source: string
           start_date: string | null
           status: Database["public"]["Enums"]["workflow_status"]
           technician: string | null
@@ -831,8 +833,10 @@ export type Database = {
           next_maintenance_date?: string | null
           organization_id: string
           parts_used?: string | null
+          photo_path?: string | null
           remarks?: string | null
           service_provider?: string | null
+          source?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["workflow_status"]
           technician?: string | null
@@ -850,8 +854,10 @@ export type Database = {
           next_maintenance_date?: string | null
           organization_id?: string
           parts_used?: string | null
+          photo_path?: string | null
           remarks?: string | null
           service_provider?: string | null
+          source?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["workflow_status"]
           technician?: string | null
@@ -1104,6 +1110,15 @@ export type Database = {
       process_asset_transfer: {
         Args: { _action: string; _transfer_id: string }
         Returns: Database["public"]["Enums"]["workflow_status"]
+      }
+      submit_qr_breakdown: {
+        Args: {
+          _photo_path: string
+          _remarks: string
+          _title: string
+          _token: string
+        }
+        Returns: string
       }
     }
     Enums: {
