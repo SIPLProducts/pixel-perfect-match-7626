@@ -6,6 +6,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 
 import { assetSchema, updateAssetSchema, assetValues } from "@/lib/asset-form-schema";
+import { importAssetsSchema } from "@/lib/asset-import";
 
 const transferSchema = z.object({
   assetId: z.string().uuid(),
@@ -141,6 +142,20 @@ export const createAsset = createServerFn({ method: "POST" })
     const { error: qrError } = await context.supabase.from("asset_qr_codes").insert({ organization_id: membership.organization_id, asset_id: asset.id, generated_by: context.userId });
     if (qrError) throw new Error(qrError.message);
     return asset;
+  });
+
+export const importAssets = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => importAssetsSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const membership = await getMembership(context.supabase, context.userId);
+    if (!membership) throw new Error("Workspace not found");
+    const { data: count, error } = await context.supabase.rpc("import_asset_rows", {
+      _organization_id: membership.organization_id,
+      _rows: data.rows.map(assetValues),
+    });
+    if (error) throw new Error("Import was not saved. Check for duplicate serial numbers and valid workspace details, then retry.");
+    return { count: count ?? 0 };
   });
 
 export const updateAsset = createServerFn({ method: "POST" })
