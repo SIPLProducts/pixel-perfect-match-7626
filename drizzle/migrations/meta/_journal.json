@@ -92,6 +92,13 @@
       "when": 1791649908433,
       "tag": "0012_align_excel_import_erp_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791650270844,
+      "tag": "0013_edit_asset_transfer_safely",
+      "breakpoints": true
     }
   ]
 }
