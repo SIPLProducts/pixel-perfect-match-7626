@@ -1,5 +1,7 @@
 # Sharvi Asset360 roadmap
 
+- [x] Add per-asset QR output history with request time and initiating user; verify tenant isolation and display
+
 - [x] Add persistent QR print counts to the asset register and verify single and batch label outputs
 
 - [x] Add private warranty certificate, equipment manual, and drawing attachments to asset forms and details; verify upload and download
