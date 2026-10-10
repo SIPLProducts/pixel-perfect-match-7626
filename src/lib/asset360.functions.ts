@@ -244,8 +244,8 @@ export const updateTransfer = createServerFn({ method: "POST" })
     if (!membership || !transferRoles.has(membership.role)) throw new Error("You do not have permission to edit transfers");
     const { data: id, error } = await context.supabase.rpc("edit_asset_transfer", {
       _transfer_id: data.transferId, _expected_updated_at: data.expectedUpdatedAt,
-      _to_location_id: data.toLocationId, _to_employee_id: data.toEmployeeId ?? null,
-      _transfer_date: data.transferDate, _reason: data.reason, _remarks: data.remarks ?? null,
+      _to_location_id: data.toLocationId, _to_employee_id: data.toEmployeeId,
+      _transfer_date: data.transferDate, _reason: data.reason, _remarks: data.remarks,
     });
     if (error) throw new Error(error.message);
     return { id };
