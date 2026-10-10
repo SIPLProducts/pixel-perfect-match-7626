@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
 import { Workspace } from "@/components/asset360/workspace";
 import { workspaceQueryOptions } from "@/lib/workspace-query";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,12 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Workspace,
 });
 
-function WorkspaceError() {
+function WorkspaceError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
-  return <main className="grid min-h-screen place-items-center bg-background"><div className="space-y-4 text-center"><h1 className="text-xl font-semibold">Workspace unavailable</h1><Button onClick={() => { void router.invalidate(); }}>Try again</Button></div></main>;
+  const failedPageDownload = /failed to fetch dynamically imported module|importing a module script failed|loading chunk .* failed/i.test(error instanceof Error ? error.message : String(error));
+  return <main className="grid min-h-screen place-items-center bg-background"><div className="space-y-4 text-center"><h1 className="text-xl font-semibold">Workspace unavailable</h1><Button onClick={() => {
+    if (failedPageDownload) { window.location.reload(); return; }
+    void router.invalidate();
+    reset();
+  }}>Try again</Button></div></main>;
 }
