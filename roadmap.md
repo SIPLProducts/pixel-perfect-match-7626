@@ -1,6 +1,6 @@
 # Sharvi Asset360 roadmap
 
-- [ ] Add persistent QR print counts to the asset register and verify single and batch label outputs
+- [x] Add persistent QR print counts to the asset register and verify single and batch label outputs
 
 - [x] Add private warranty certificate, equipment manual, and drawing attachments to asset forms and details; verify upload and download
 
