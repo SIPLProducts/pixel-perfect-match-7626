@@ -9,6 +9,7 @@ import { assetSchema, updateAssetSchema, assetValues } from "@/lib/asset-form-sc
 import { importAssetsSchema } from "@/lib/asset-import";
 import { readAllRows } from "@/lib/read-all-rows";
 import { qrPrintCounts, qrPrintSchema } from "@/lib/qr-print-tracking";
+import { qrPrintHistory } from "@/lib/qr-print-history";
 
 const transferSchema = z.object({
   assetId: z.string().uuid(),
@@ -115,9 +116,13 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       readAllRows((from, to) => context.supabase.from("asset_events").select("id,event_type,summary,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
     ]);
     const attachments = await readAllRows((from, to) => context.supabase.from("asset_attachments").select("id,asset_id,document_type,file_name,file_size,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to));
-    const prints = await readAllRows((from, to) => context.supabase.from("asset_qr_prints").select("asset_id").eq("organization_id", organizationId).order("id").range(from, to));
+    const [prints, printUsers] = await Promise.all([
+      readAllRows((from, to) => context.supabase.from("asset_qr_prints").select("id,asset_id,action,created_at,created_by").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("profiles").select("id,full_name").eq("organization_id", organizationId).order("id").range(from, to)),
+    ]);
     const printCounts = qrPrintCounts(prints.data ?? []);
-    const firstError = [prints, attachments, organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications, events].find((result) => result.error)?.error;
+    const printHistory = qrPrintHistory(prints.data ?? [], printUsers.data ?? []);
+    const firstError = [prints, printUsers, attachments, organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications, events].find((result) => result.error)?.error;
     if (firstError) throw new Error(firstError.message);
     const serviceRequests = [];
     for (let offset = 0; offset < (maintenance.data ?? []).length; offset += 6) {
@@ -127,7 +132,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       }));
       serviceRequests.push(...batch);
     }
-    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0 })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
+    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, qrPrintHistory: printHistory, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0 })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
   });
 
 export const recordQrPrints = createServerFn({ method: "POST" })

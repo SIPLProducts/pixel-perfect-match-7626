@@ -20,3 +20,4 @@
 - All workspace views share a user-keyed Query cache and a tenant-filtered Realtime subscription with reconnect/focus refresh and periodic fallback; this synchronizes saved records without exposing another user's cached workspace.
 - Workspace collection reads paginate in stable order and server requests run in batches of at most six; this avoids truncated figures and the published runtime's connection limit.
 - Derive QR print counts from immutable tenant-scoped label-output history recorded through an authenticated idempotent database transaction; track print, PDF and PNG delivery once per selected asset, not previews or physical printer completion.
+- Display per-asset QR history from that same output ledger and resolve names only through tenant-scoped authenticated profile reads; retain the initiator ID when a profile is unavailable to preserve attribution without privileged reads.
