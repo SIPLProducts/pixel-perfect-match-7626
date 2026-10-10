@@ -41,7 +41,7 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
-  const failedPageDownload = /failed to fetch dynamically imported module|importing a module script failed|loading chunk .* failed/i.test(error.message);
+  const failedPageDownload = /failed to fetch dynamically imported module|importing a module script failed|loading chunk .* failed/i.test(error instanceof Error ? error.message : String(error));
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
