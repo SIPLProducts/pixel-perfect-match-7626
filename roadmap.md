@@ -1,5 +1,9 @@
 # Sharvi Asset360 roadmap
 
+- [x] Add inline transfer creation and editing with safe status actions
+- [x] Improve the transfer register, filters, and per-asset history
+- [x] Verify transfer saves, permissions, history, and live updates
+
 - [x] Align Excel template, validation, and saved imports with all Asset screen fields
 
 - [x] Make service-request editing inline and verify save and cancel

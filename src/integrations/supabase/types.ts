@@ -1236,6 +1236,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      edit_asset_transfer: {
+        Args: {
+          _expected_updated_at: string
+          _reason?: string
+          _remarks?: string
+          _to_employee_id?: string
+          _to_location_id: string
+          _transfer_date?: string
+          _transfer_id: string
+        }
+        Returns: string
+      }
       get_public_asset: {
         Args: { _token: string }
         Returns: {
