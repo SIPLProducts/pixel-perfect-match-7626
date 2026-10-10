@@ -27,3 +27,5 @@
 - [x] Remove the Scan QR screen and navigation while preserving asset QR labels and public details
 - [x] Connect QR digital profiles to Asset details and photographed breakdown reports in Service requests
 - [ ] Validate remaining onboarding and lifecycle workflows — awaiting their screen-by-screen review
+
+- [x] Improve Service requests totals, filters, request register, and detailed photo review without changing request workflows
