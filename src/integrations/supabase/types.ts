@@ -1383,6 +1383,18 @@ export type Database = {
           registration_number: string
         }[]
       }
+      get_public_car_contact: {
+        Args: { _token: string }
+        Returns: {
+          color: string
+          make: string
+          mobile_masked: string
+          model: string
+          owner_mobile: string
+          owner_name: string
+          registration_number: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
