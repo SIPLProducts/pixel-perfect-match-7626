@@ -7,6 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 import { assetSchema, updateAssetSchema, assetValues } from "@/lib/asset-form-schema";
 import { importAssetsSchema } from "@/lib/asset-import";
+import { readAllRows } from "@/lib/read-all-rows";
 
 const transferSchema = z.object({
   assetId: z.string().uuid(),
@@ -97,25 +98,32 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
     const membership = await getMembership(context.supabase, context.userId);
     if (!membership) return { needsOnboarding: true as const };
     const organizationId = membership.organization_id;
-    const [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications] = await Promise.all([
+    const [organization, profile, assets, categories, locations, departments] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),
       context.supabase.from("profiles").select("full_name,job_title,avatar_url").eq("id", context.userId).maybeSingle(),
-      context.supabase.from("assets").select("id,asset_id,name,category_id,remarks,manufacturer,model,serial_number,plant,company_code,status,condition,location_id,department_id,assigned_employee_id,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
-      context.supabase.from("asset_categories").select("id,name,prefix").eq("organization_id", organizationId).order("name"),
-      context.supabase.from("locations").select("id,name,type,code").eq("organization_id", organizationId).order("name"),
-      context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name"),
-      context.supabase.from("employees").select("id,full_name,employee_code,designation,status").eq("organization_id", organizationId).order("full_name"),
-      context.supabase.from("asset_transfers").select("id,status,transfer_date,reason,remarks,from_location_id,to_location_id,from_employee_id,to_employee_id,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
-      context.supabase.from("maintenance_requests").select("id,title,status,maintenance_type,next_maintenance_date,cost,remarks,photo_path,source,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
-      context.supabase.from("asset_verifications").select("id,status,verified_at,assets(asset_id,name)").eq("organization_id", organizationId).order("verified_at", { ascending: false }).limit(8),
+      readAllRows((from, to) => context.supabase.from("assets").select("id,asset_id,name,category_id,remarks,manufacturer,model,serial_number,plant,company_code,status,condition,location_id,department_id,assigned_employee_id,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("asset_categories").select("id,name,prefix").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("locations").select("id,name,type,code").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
     ]);
-    const firstError = [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications].find((result) => result.error)?.error;
+    const [employees, transfers, maintenance, verifications, events] = await Promise.all([
+      readAllRows((from, to) => context.supabase.from("employees").select("id,full_name,employee_code,designation,status").eq("organization_id", organizationId).order("full_name").order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("asset_transfers").select("id,status,transfer_date,reason,remarks,from_location_id,to_location_id,from_employee_id,to_employee_id,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("maintenance_requests").select("id,title,status,maintenance_type,next_maintenance_date,cost,remarks,photo_path,source,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("asset_verifications").select("id,status,verified_at,assets(asset_id,name)").eq("organization_id", organizationId).order("verified_at", { ascending: false }).order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("asset_events").select("id,event_type,summary,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+    ]);
+    const firstError = [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications, events].find((result) => result.error)?.error;
     if (firstError) throw new Error(firstError.message);
-    const serviceRequests = await Promise.all((maintenance.data ?? []).map(async (request) => {
-      const photo = request.photo_path ? await context.supabase.storage.from("breakdown-photos").createSignedUrl(request.photo_path, 3600) : null;
-      return { ...request, photo_url: photo?.data?.signedUrl ?? null };
-    }));
-    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, assets: assets.data ?? [], categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [] };
+    const serviceRequests = [];
+    for (let offset = 0; offset < (maintenance.data ?? []).length; offset += 6) {
+      const batch = await Promise.all((maintenance.data ?? []).slice(offset, offset + 6).map(async (request) => {
+        const photo = request.photo_path ? await context.supabase.storage.from("breakdown-photos").createSignedUrl(request.photo_path, 3600) : null;
+        return { ...request, photo_url: photo?.data?.signedUrl ?? null };
+      }));
+      serviceRequests.push(...batch);
+    }
+    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, assets: assets.data ?? [], categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
   });
 
 async function validateAssetReferences(supabase: SupabaseClient<Database>, organizationId: string, data: z.infer<typeof assetSchema>) {
