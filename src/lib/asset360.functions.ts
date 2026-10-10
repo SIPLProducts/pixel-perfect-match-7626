@@ -10,15 +10,7 @@ import { importAssetsSchema } from "@/lib/asset-import";
 import { readAllRows } from "@/lib/read-all-rows";
 import { qrPrintCounts, qrPrintSchema } from "@/lib/qr-print-tracking";
 import { qrPrintHistory } from "@/lib/qr-print-history";
-
-const transferSchema = z.object({
-  assetId: z.string().uuid(),
-  toLocationId: z.string().uuid(),
-  toEmployeeId: z.string().uuid().optional(),
-  transferDate: z.string().date(),
-  reason: z.string().trim().min(3).max(200),
-  remarks: z.string().trim().max(1000).optional(),
-});
+import { transferSchema, editTransferSchema } from "@/lib/transfer-schema";
 
 const transferRoles = new Set(["super_admin", "admin", "asset_manager", "facility_manager", "it_manager"]);
 
@@ -110,7 +102,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
     ]);
     const [employees, transfers, maintenance, verifications, events] = await Promise.all([
       readAllRows((from, to) => context.supabase.from("employees").select("id,full_name,employee_code,designation,status").eq("organization_id", organizationId).order("full_name").order("id").range(from, to)),
-      readAllRows((from, to) => context.supabase.from("asset_transfers").select("id,status,transfer_date,reason,remarks,from_location_id,to_location_id,from_employee_id,to_employee_id,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("asset_transfers").select("id,asset_id,status,transfer_date,reason,remarks,from_location_id,to_location_id,from_employee_id,to_employee_id,created_at,updated_at,created_by,approved_by,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
       readAllRows((from, to) => context.supabase.from("maintenance_requests").select("id,title,status,maintenance_type,next_maintenance_date,cost,remarks,photo_path,source,created_at,updated_at,service_provider,technician,start_date,completion_date,parts_used,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
       readAllRows((from, to) => context.supabase.from("asset_verifications").select("id,status,verified_at,assets(asset_id,name)").eq("organization_id", organizationId).order("verified_at", { ascending: false }).order("id").range(from, to)),
       readAllRows((from, to) => context.supabase.from("asset_events").select("id,event_type,summary,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
@@ -132,7 +124,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       }));
       serviceRequests.push(...batch);
     }
-    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, qrPrintHistory: printHistory, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0 })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
+    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, workspaceUsers: printUsers.data ?? [], qrPrintHistory: printHistory, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0 })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
   });
 
 export const recordQrPrints = createServerFn({ method: "POST" })
@@ -242,6 +234,21 @@ export const createTransfer = createServerFn({ method: "POST" })
     }).select("id,status").single();
     if (error) throw new Error(error.message);
     return transfer;
+  });
+
+export const updateTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(input => editTransferSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const membership = await getMembership(context.supabase, context.userId);
+    if (!membership || !transferRoles.has(membership.role)) throw new Error("You do not have permission to edit transfers");
+    const { data: id, error } = await context.supabase.rpc("edit_asset_transfer", {
+      _transfer_id: data.transferId, _expected_updated_at: data.expectedUpdatedAt,
+      _to_location_id: data.toLocationId, _to_employee_id: data.toEmployeeId ?? null,
+      _transfer_date: data.transferDate, _reason: data.reason, _remarks: data.remarks ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { id };
   });
 
 export const processTransfer = createServerFn({ method: "POST" })
