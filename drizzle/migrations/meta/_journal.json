@@ -64,6 +64,20 @@
       "when": 1791644990075,
       "tag": "0008_asset_erp_register_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791645383622,
+      "tag": "0009_private_asset_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791645590934,
+      "tag": "0010_qualify_asset_document_storage_paths",
+      "breakpoints": true
     }
   ]
 }

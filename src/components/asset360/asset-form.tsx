@@ -1,9 +1,11 @@
-import { useState, type ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, LoaderCircle, Save } from "lucide-react";
 import { toast } from "sonner";
 import { createAsset, updateAsset } from "@/lib/asset360.functions";
+import { AssetDocumentPicker, type PendingDocument } from "./asset-documents";
+import { uploadAssetDocument } from "@/lib/asset-documents.functions";
 import { assetErpFields } from "@/lib/asset-erp-fields";
 import { assetSchema } from "@/lib/asset-form-schema";
 import type { WorkspaceData } from "./workspace";
@@ -26,6 +28,10 @@ export function AssetForm({ data, asset, onClose }: { data: WorkspaceData; asset
     purchaseValue: asset?.purchase_value == null ? "" : String(asset.purchase_value), currentValue: asset?.current_value == null ? "" : String(asset.current_value),
     installationDate: asset?.capitalization_date ?? "", warrantyEnd: asset?.warranty_end ?? "", remarks: asset?.remarks ?? "",
   });
+  const upload = useServerFn(uploadAssetDocument);
+  const savedAsset = useRef<{ id: string; asset_id: string } | null>(null);
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
   const set = (key: keyof typeof form, value: string) => { setForm(current => ({ ...current, [key]: value })); setDirty(true); setErrors(current => ({ ...current, [key]: "" })); };
@@ -37,10 +43,25 @@ export function AssetForm({ data, asset, onClose }: { data: WorkspaceData; asset
         const next: Record<string, string> = {}; parsed.error.issues.forEach(issue => { next[String(issue.path[0])] = issue.message; }); setErrors(next);
         throw new Error("Please check the highlighted asset details");
       }
-      return asset ? update({ data: { ...parsed.data, assetId: asset.id } }) : create({ data: parsed.data });
+      const existingId = asset?.id ?? savedAsset.current?.id;
+      const result = existingId ? await update({ data: { ...parsed.data, assetId: existingId } }) : await create({ data: parsed.data });
+      savedAsset.current = result;
+      for (const document of pendingDocuments) {
+        setUploadProgress(`Uploading ${document.file.name}…`);
+        const payload = new FormData();
+        payload.set("assetId", result.id); payload.set("documentType", document.type); payload.set("file", document.file);
+        try { await upload({ data: payload }); }
+        catch (error) {
+          await client.invalidateQueries({ queryKey: ["workspace"] });
+          throw new Error(`Asset saved. ${document.file.name} was not uploaded: ${error instanceof Error ? error.message : "Please retry"}. Save again to retry remaining attachments.`);
+        }
+        setPendingDocuments(current => current.filter(item => item.id !== document.id));
+      }
+      setUploadProgress("");
+      return result;
     },
     onSuccess: async result => { await client.invalidateQueries({ queryKey: ["workspace"] }); toast.success(`${result.asset_id} ${asset ? "updated" : "registered"}`); onClose(); },
-    onError: error => toast.error(error.message),
+    onError: error => { setUploadProgress(""); toast.error(error.message); },
   });
   const field = (key: keyof typeof form, label: string, child: ReactNode) => <div key={key} className="min-w-0"><Label htmlFor={`asset-${key}`} className="mb-2 block">{label}</Label>{child}{errors[key] && <p className="mt-1 text-xs text-destructive" role="alert">{errors[key]}</p>}</div>;
   const input = (key: keyof typeof form, label: string, type = "text", maxLength = 100) => field(key, label, <Input id={`asset-${key}`} aria-invalid={Boolean(errors[key])} value={form[key]} onChange={e => set(key, e.target.value)} type={type} maxLength={maxLength} min={type === "number" && !assetErpFields.some(field => field.key === key) ? 0 : undefined} max={type === "number" ? 999999999999 : undefined} step={type === "number" ? "any" : undefined} className="w-full bg-glass-strong" />);
@@ -54,8 +75,10 @@ export function AssetForm({ data, asset, onClose }: { data: WorkspaceData; asset
         {section("Location & ownership", <>{input("plant", "Plant")}{select("locationId", "Location", data.locations, true)}{select("departmentId", "Department", data.departments, true)}{select("employeeId", "Custodian", data.employees.map(x => ({ id: x.id, name: x.full_name })), true)}</>)}
         {section("Value & lifecycle", <>{input("purchaseValue", "Cumulative acquisition value", "number")}{input("currentValue", "Ending book value", "number")}{input("installationDate", "Capitalized on / installation date", "date")}{input("warrantyEnd", "Warranty end", "date")}{select("status", "Status", assetSchema.shape.status.options.map(id => ({ id, name: id.replaceAll("_", " ") })))}{select("condition", "Condition", assetSchema.shape.condition.options.map(id => ({ id, name: id })))}</>)}
         {["ERP identification", "Depreciation & life", "Financial movements", "Additional references"].map(title => <div key={title}>{section(title, assetErpFields.filter(field => field.section === title).map(field => input(field.key, field.label, field.type)))}</div>)}
+        <AssetDocumentPicker pending={pendingDocuments} onChange={documents => { setPendingDocuments(documents); setDirty(true); }} existing={data.attachments.filter(document => document.asset_id === (asset?.id ?? savedAsset.current?.id))} />
         <section className="py-6">{field("remarks", "Remarks", <textarea id="asset-remarks" value={form.remarks} onChange={e => set("remarks", e.target.value)} maxLength={1000} rows={3} className="w-full rounded-md border border-input bg-glass-strong p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />)}</section>
       </fieldset>
+      {uploadProgress && <p role="status" className="mb-4 text-sm text-primary">{uploadProgress}</p>}
       {mutation.error && <p role="alert" className="mb-4 text-sm text-destructive">{mutation.error.message}</p>}
       <div className="flex flex-wrap justify-end gap-3 border-t border-glass-border py-5"><Button type="button" variant="outline" onClick={close} disabled={mutation.isPending}>Cancel</Button><Button type="submit" variant="hero" disabled={mutation.isPending}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />}{asset ? "Save changes" : "Register asset"}</Button></div>
     </form>

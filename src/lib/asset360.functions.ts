@@ -113,7 +113,8 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       readAllRows((from, to) => context.supabase.from("asset_verifications").select("id,status,verified_at,assets(asset_id,name)").eq("organization_id", organizationId).order("verified_at", { ascending: false }).order("id").range(from, to)),
       readAllRows((from, to) => context.supabase.from("asset_events").select("id,event_type,summary,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
     ]);
-    const firstError = [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications, events].find((result) => result.error)?.error;
+    const attachments = await readAllRows((from, to) => context.supabase.from("asset_attachments").select("id,asset_id,document_type,file_name,file_size,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to));
+    const firstError = [attachments, organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications, events].find((result) => result.error)?.error;
     if (firstError) throw new Error(firstError.message);
     const serviceRequests = [];
     for (let offset = 0; offset < (maintenance.data ?? []).length; offset += 6) {
@@ -123,7 +124,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       }));
       serviceRequests.push(...batch);
     }
-    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, assets: assets.data ?? [], categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
+    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, attachments: attachments.data ?? [], assets: assets.data ?? [], categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
   });
 
 async function validateAssetReferences(supabase: SupabaseClient<Database>, organizationId: string, data: z.infer<typeof assetSchema>) {
