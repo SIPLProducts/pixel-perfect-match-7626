@@ -26,3 +26,4 @@
 - Render service-request editing as an inline page state using the shared form; keep the request dialog read-only so editing has full-page space without changing save logic.
 - Use one inline transfer form with shared validation; transfer edits lock the existing row, enforce tenant manager permissions and updated_at, preserve the asset and origin, reset approval, and record an asset event atomically.
 - Render the transfer register and per-asset history from the live tenant-filtered workspace data; resolve initiators from tenant-scoped profiles and keep completion routed through the existing assignment transaction.
+- Derive latest-transfer columns in the Asset register from the shared live transfer records; keep current location and custodian sourced from the asset row so pending movements never appear completed.
