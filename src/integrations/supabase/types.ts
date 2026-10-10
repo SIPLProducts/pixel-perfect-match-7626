@@ -95,6 +95,60 @@ export type Database = {
           },
         ]
       }
+      asset_attachments: {
+        Row: {
+          asset_id: string
+          content_type: string
+          created_at: string
+          created_by: string
+          document_type: string
+          file_name: string
+          file_size: number
+          id: string
+          organization_id: string
+          storage_path: string
+        }
+        Insert: {
+          asset_id: string
+          content_type: string
+          created_at?: string
+          created_by: string
+          document_type: string
+          file_name: string
+          file_size: number
+          id?: string
+          organization_id: string
+          storage_path: string
+        }
+        Update: {
+          asset_id?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string
+          document_type?: string
+          file_name?: string
+          file_size?: number
+          id?: string
+          organization_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_attachments_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_attachments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_categories: {
         Row: {
           created_at: string
