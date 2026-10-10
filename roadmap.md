@@ -23,4 +23,5 @@
 - [x] Validate signed-in asset selection and QR-label PDF download
 - [x] Build and verify inline Add asset and Edit asset screens
 - [x] Add and verify Excel asset upload with a template and validation preview
+- [x] Make the Excel template directly downloadable from Asset Master and verify filled-template upload
 - [ ] Validate remaining onboarding and lifecycle workflows — awaiting their screen-by-screen review
