@@ -22,3 +22,4 @@
 - Derive QR print counts from immutable tenant-scoped label-output history recorded through an authenticated idempotent database transaction; track print, PDF and PNG delivery once per selected asset, not previews or physical printer completion.
 - Display per-asset QR history from that same output ledger and resolve names only through tenant-scoped authenticated profile reads; retain the initiator ID when a profile is unavailable to preserve attribution without privileged reads.
 - Service request edits use shared validation and authenticated tenant-scoped updates with an updated_at comparison; preserve the original asset, reporter, source and photo, and reject stale saves rather than overwriting another user's changes.
+- Render service-request editing as an inline page state using the shared form; keep the request dialog read-only so editing has full-page space without changing save logic.

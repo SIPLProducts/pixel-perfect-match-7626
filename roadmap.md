@@ -1,5 +1,7 @@
 # Sharvi Asset360 roadmap
 
+- [x] Make service-request editing inline and verify save and cancel
+
 - [x] Add and verify service request editing and persistent status updates
 
 - [x] Add per-asset QR output history with request time and initiating user; verify tenant isolation and display
