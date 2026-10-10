@@ -5,25 +5,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 
-const assetSchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  categoryId: z.string().uuid(),
-  serialNumber: z.string().trim().max(100).optional(),
-  manufacturer: z.string().trim().max(100).optional(),
-  model: z.string().trim().max(100).optional(),
-  status: z.enum(["active", "in_stock", "assigned", "under_maintenance", "under_repair", "missing", "damaged", "retired", "disposed"]),
-  condition: z.enum(["new", "good", "average", "poor", "damaged"]),
-  locationId: z.string().uuid().optional(),
-  departmentId: z.string().uuid().optional(),
-  employeeId: z.string().uuid().optional(),
-  purchaseValue: z.number().nonnegative().max(999999999999).optional(),
-  currentValue: z.number().nonnegative().max(999999999999).optional(),
-  plant: z.string().trim().max(100).optional(),
-  companyCode: z.string().trim().max(50).optional(),
-  installationDate: z.string().date().optional(),
-  warrantyEnd: z.string().date().optional(),
-  remarks: z.string().trim().max(1000).optional(),
-});
+import { assetSchema, updateAssetSchema, assetValues } from "@/lib/asset-form-schema";
 
 const transferSchema = z.object({
   assetId: z.string().uuid(),
@@ -117,7 +99,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
     const [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),
       context.supabase.from("profiles").select("full_name,job_title,avatar_url").eq("id", context.userId).maybeSingle(),
-      context.supabase.from("assets").select("id,asset_id,name,manufacturer,model,serial_number,plant,company_code,status,condition,location_id,department_id,assigned_employee_id,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
+      context.supabase.from("assets").select("id,asset_id,name,category_id,remarks,manufacturer,model,serial_number,plant,company_code,status,condition,location_id,department_id,assigned_employee_id,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
       context.supabase.from("asset_categories").select("id,name,prefix").eq("organization_id", organizationId).order("name"),
       context.supabase.from("locations").select("id,name,type,code").eq("organization_id", organizationId).order("name"),
       context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name"),
@@ -131,20 +113,48 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
     return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, assets: assets.data ?? [], categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: maintenance.data ?? [], verifications: verifications.data ?? [] };
   });
 
+async function validateAssetReferences(supabase: SupabaseClient<Database>, organizationId: string, data: z.infer<typeof assetSchema>) {
+  const references = [
+    ["asset_categories", data.categoryId], ["locations", data.locationId],
+    ["departments", data.departmentId], ["employees", data.employeeId],
+  ] as const;
+  await Promise.all(references.map(async ([table, id]) => {
+    if (!id) return;
+    const { data: row, error } = await supabase.from(table).select("id").eq("id", id).eq("organization_id", organizationId).maybeSingle();
+    if (error || !row) throw new Error("Select a valid category, location, department and custodian from this workspace");
+  }));
+}
+
 export const createAsset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => assetSchema.parse(input))
   .handler(async ({ data, context }) => {
     const membership = await getMembership(context.supabase, context.userId);
     if (!membership) throw new Error("Workspace not found");
+    await validateAssetReferences(context.supabase, membership.organization_id, data);
     const { data: category, error: categoryError } = await context.supabase.from("asset_categories").select("prefix").eq("id", data.categoryId).eq("organization_id", membership.organization_id).single();
     if (categoryError) throw new Error(categoryError.message);
     const { count } = await context.supabase.from("assets").select("id", { count: "exact", head: true }).eq("organization_id", membership.organization_id).eq("category_id", data.categoryId);
     const assetId = `${category.prefix}-${String((count ?? 0) + 1).padStart(6, "0")}`;
-    const { data: asset, error } = await context.supabase.from("assets").insert({ organization_id: membership.organization_id, asset_id: assetId, name: data.name, category_id: data.categoryId, serial_number: data.serialNumber || null, manufacturer: data.manufacturer || null, model: data.model || null, plant: data.plant || null, company_code: data.companyCode || null, status: data.status, condition: data.condition, location_id: data.locationId || null, department_id: data.departmentId || null, assigned_employee_id: data.employeeId || null, purchase_value: data.purchaseValue ?? null, current_value: data.currentValue ?? null, capitalization_date: data.installationDate ?? null, warranty_end: data.warrantyEnd ?? null, remarks: data.remarks || null, created_by: context.userId, updated_by: context.userId }).select("id,asset_id").single();
+    const { data: asset, error } = await context.supabase.from("assets").insert({ ...assetValues(data), organization_id: membership.organization_id, asset_id: assetId, created_by: context.userId, updated_by: context.userId }).select("id,asset_id").single();
     if (error) throw new Error(error.message);
     const { error: qrError } = await context.supabase.from("asset_qr_codes").insert({ organization_id: membership.organization_id, asset_id: asset.id, generated_by: context.userId });
     if (qrError) throw new Error(qrError.message);
+    return asset;
+  });
+
+export const updateAsset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => updateAssetSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const membership = await getMembership(context.supabase, context.userId);
+    if (!membership) throw new Error("Workspace not found");
+    await validateAssetReferences(context.supabase, membership.organization_id, data);
+    const { data: asset, error } = await context.supabase.from("assets")
+      .update({ ...assetValues(data), updated_by: context.userId })
+      .eq("id", data.assetId).eq("organization_id", membership.organization_id)
+      .select("id,asset_id").single();
+    if (error || !asset) throw new Error("Could not save this asset in your workspace");
     return asset;
   });
 
