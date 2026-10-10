@@ -24,3 +24,5 @@
 - Display per-asset QR history from that same output ledger and resolve names only through tenant-scoped authenticated profile reads; retain the initiator ID when a profile is unavailable to preserve attribution without privileged reads.
 - Service request edits use shared validation and authenticated tenant-scoped updates with an updated_at comparison; preserve the original asset, reporter, source and photo, and reject stale saves rather than overwriting another user's changes.
 - Render service-request editing as an inline page state using the shared form; keep the request dialog read-only so editing has full-page space without changing save logic.
+- Use one inline transfer form with shared validation; transfer edits lock the existing row, enforce tenant manager permissions and updated_at, preserve the asset and origin, reset approval, and record an asset event atomically.
+- Render the transfer register and per-asset history from the live tenant-filtered workspace data; resolve initiators from tenant-scoped profiles and keep completion routed through the existing assignment transaction.
