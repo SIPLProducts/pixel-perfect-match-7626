@@ -1,6 +1,8 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, getRouteApi } from "@tanstack/react-router";
+import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { workspaceQueryOptions } from "@/lib/workspace-query";
+import { useWorkspaceSync } from "./use-workspace-sync";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from "recharts";
 import { Activity, Pencil, Archive, ArrowRightLeft, Bell, Boxes, Building2, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, Download, FileSpreadsheet, Filter, History, LayoutDashboard, LoaderCircle, LogOut, Menu, MoreHorizontal, PackagePlus, PanelLeftClose, PanelLeftOpen, QrCode, Search, Settings, ShieldCheck, Upload, UserRound, Users, Wrench, X } from "lucide-react";
 import { toast } from "sonner";
@@ -37,11 +39,13 @@ const nav = [
 const pageCopy: Record<string, [string, string]> = { dashboard: ["Dashboard", "Your asset operations at a glance."], assets: ["Asset master", "Search, filter, and manage every registered asset."], transfers: ["Asset transfers", "Track handovers and approval status."], maintenance: ["Service requests", "Equipment breakdowns and service records."], verification: ["Verification", "Reconcile physical assets with your register."], categories: ["Asset categories", "Manage identification prefixes and classes."], locations: ["Locations", "Navigate your company’s physical hierarchy."], employees: ["Employees", "Manage custodians and ownership."], reports: ["Reports", "Export operational insights for review."], audit: ["Audit trail", "Review immutable activity across the workspace."], settings: ["Settings", "Configure your organization and integrations."] };
 
 export function Workspace() {
-  const query = useQuery({ queryKey: ["workspace"], queryFn: () => getWorkspaceData() });
+  const { user } = getRouteApi("/_authenticated").useRouteContext();
+  const query = useSuspenseQuery(workspaceQueryOptions(user.id));
+  const syncStatus = useWorkspaceSync(query.data.needsOnboarding ? undefined : query.data.organization?.id, user.id);
   const [active, setActive] = useState("dashboard"); const [collapsed, setCollapsed] = useState(false); const [mobileOpen, setMobileOpen] = useState(false);
   const [assetDialog, setAssetDialog] = useState(false); const [importOpen, setImportOpen] = useState(false); const [editingAsset, setEditingAsset] = useState<Asset | null>(null); const [transferDialog, setTransferDialog] = useState(false); const [search, setSearch] = useState(""); const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   if (query.isLoading) return <LoadingScreen />;
-  if (query.error) return <ErrorScreen message={query.error.message} retry={() => query.refetch()} />;
+   if (query.error && !query.data) return <ErrorScreen message={query.error.message} retry={() => query.refetch()} />;
   if (query.data?.needsOnboarding) return <Onboarding />;
   const data = query.data as WorkspaceData;
   const title = pageCopy[active] ?? pageCopy["dashboard"] ?? ["Dashboard", "Your asset operations at a glance."];
@@ -49,7 +53,7 @@ export function Workspace() {
   return <div className="app-backdrop min-h-screen">
     <Sidebar data={data} active={active} setActive={(id) => {setActive(id);setMobileOpen(false)}} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}/>
     <div className={`min-h-screen transition-[margin] duration-200 ${collapsed ? "lg:ml-[76px]" : "lg:ml-[248px]"}`}>
-      <Topbar data={data} assets={data.assets} onMenu={() => setMobileOpen(true)} onSelectAsset={(asset) => { setSelectedAsset(asset); setActive("assets"); }} />
+      <Topbar data={data} assets={data.assets} syncStatus={query.isRefetchError ? "Updates unavailable" : query.isFetching ? "Updating…" : syncStatus} onMenu={() => setMobileOpen(true)} onSelectAsset={(asset) => { setSelectedAsset(asset); setActive("assets"); }} />
       <main className="mx-auto max-w-[1600px] px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">Operations center</p><h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{importOpen ? "Import assets" : assetDialog ? editingAsset ? "Edit asset" : "Add asset" : title[0]}</h1>{!assetDialog && !importOpen && <p className="mt-1 text-sm text-muted-foreground">{title[1]}</p>}</div>{!assetDialog && !importOpen && <PageActions active={active} onImport={()=>setImportOpen(true)} setAssetDialog={()=>{setEditingAsset(null);setActive("assets");setAssetDialog(true)}} data={data} assets={data.assets}/>}</div>
         {importOpen && <AssetImport data={data} onClose={()=>setImportOpen(false)}/>}
@@ -59,7 +63,7 @@ export function Workspace() {
     </div>
     <MobileNav active={active} setActive={setActive}/>
     <CreateTransferDialog open={transferDialog} setOpen={setTransferDialog} data={data}/>
-    <AssetDetail asset={selectedAsset} onClose={() => setSelectedAsset(null)} onEdit={asset=>{setSelectedAsset(null);setEditingAsset(asset);setActive("assets");setAssetDialog(true)}}/>
+    <AssetDetail asset={data.assets.find(asset=>asset.id===selectedAsset?.id) ?? null} onClose={() => setSelectedAsset(null)} onEdit={asset=>{setSelectedAsset(null);setEditingAsset(asset);setActive("assets");setAssetDialog(true)}}/>
   </div>;
 }
 
