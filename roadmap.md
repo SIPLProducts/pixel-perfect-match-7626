@@ -24,4 +24,5 @@
 - [x] Build and verify inline Add asset and Edit asset screens
 - [x] Add and verify Excel asset upload with a template and validation preview
 - [x] Make the Excel template directly downloadable from Asset Master and verify filled-template upload
+- [x] Remove the Scan QR screen and navigation while preserving asset QR labels and public details
 - [ ] Validate remaining onboarding and lifecycle workflows — awaiting their screen-by-screen review
