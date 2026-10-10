@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Wrench, RefreshCw, Camera, ClipboardList, Clock3, CheckCircle2, QrCode, ArrowUpRight, RotateCcw, LoaderCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Wrench, RefreshCw, Camera, ClipboardList, Clock3, CheckCircle2, QrCode, ArrowUpRight, RotateCcw, LoaderCircle, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { WorkspaceData } from "./workspace";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ServiceRequestForm } from "./service-request-form";
 
  type Request = WorkspaceData["maintenance"][number];
 const pretty = (value: string) => value.replace(/_/g, " ").replace(/\b\w/g, char => char.toUpperCase());
@@ -29,6 +30,8 @@ export function ServiceRequests({data}:{data:WorkspaceData}) {
   const [page,setPage] = useState(1);
   const [selectedId,setSelectedId] = useState<string | null>(null);
   const [photoFailed,setPhotoFailed] = useState(false);
+  const [editing,setEditing] = useState<Request | null>(null);
+  const [saving,setSaving] = useState(false);
   const queryClient = useQueryClient();
   const refreshing = useIsFetching({queryKey:["workspace"]}) > 0;
   const selected = data.maintenance.find(r=>r.id === selectedId);
@@ -39,7 +42,9 @@ export function ServiceRequests({data}:{data:WorkspaceData}) {
   const shown = requests.slice((currentPage-1)*10,currentPage*10);
   const filtered = Boolean(search || status !== "all" || source !== "all" || type !== "all");
   const reset = () => {setSearch("");setStatus("all");setSource("all");setType("all");setSort("newest");setPage(1)};
-  const open = (r:Request) => {setSelectedId(r.id);setPhotoFailed(false)};
+  const open = (r:Request) => {setSelectedId(r.id);setPhotoFailed(false);setEditing(null)};
+  const cancelEdit = () => {if (!saving && window.confirm("Discard unsaved service request changes?")) setEditing(null)};
+  const closeRequest = () => {if (saving) return; if (editing && !window.confirm("Discard unsaved service request changes?")) return; setEditing(null);setSelectedId(null)};
   const metrics = [
     {label:"Total requests",value:requests.length,icon:ClipboardList,tone:"text-primary bg-primary/10"},
     {label:"Pending",value:requests.filter(r=>r.status === "pending").length,icon:Clock3,tone:"text-warning bg-warning/10"},
@@ -64,10 +69,12 @@ export function ServiceRequests({data}:{data:WorkspaceData}) {
       <div className="grid gap-3 md:hidden">{shown.map(r=><article key={r.id} className="glass-panel min-w-0 rounded-lg p-4"><div className="flex flex-wrap justify-between gap-2"><RequestStatus value={r.status}/><span className="text-xs text-muted-foreground">{r.source === "qr" ? "QR label" : pretty(r.source)}</span></div><h3 className="mt-3 break-words font-display font-bold">{r.title}</h3><p className="mt-1 break-words text-xs text-muted-foreground"><span className="font-mono text-primary">{r.assets?.asset_id}</span> · {r.assets?.name}</p><div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>{date(r.created_at)}</span><span>{pretty(r.maintenance_type)}</span></div><Button className="mt-4 w-full" variant="outline" onClick={()=>open(r)}>{r.photo_url ? <Camera className="size-4"/> : <ArrowUpRight className="size-4"/>}View request</Button></article>)}</div>
       <div className="flex items-center justify-between border-t border-border pt-4"><p className="text-xs text-muted-foreground">Page {currentPage} of {totalPages}</p><div className="flex gap-2"><Button variant="outline" size="icon" aria-label="Previous page" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}><ChevronLeft className="size-4"/></Button><Button variant="outline" size="icon" aria-label="Next page" disabled={currentPage===totalPages} onClick={()=>setPage(currentPage+1)}><ChevronRight className="size-4"/></Button></div></div>
     </> : <div className="py-14 text-center"><Wrench className="mx-auto size-10 text-muted-foreground"/><h2 className="mt-4 font-display font-bold">{filtered ? "No matching requests" : "No service requests yet"}</h2>{filtered && <Button variant="outline" className="mt-4" onClick={reset}><RotateCcw className="size-4"/>Clear filters</Button>}</div>}
-    <Dialog open={Boolean(selected)} onOpenChange={value=>{if(!value)setSelectedId(null)}}><DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle className="break-words pr-5">{selected?.title}</DialogTitle><DialogDescription>{selected?.assets?.asset_id} · {selected?.assets?.name}</DialogDescription></DialogHeader>{selected && <>
+    <Dialog open={Boolean(selected)} onOpenChange={value=>{if(!value)closeRequest()}}><DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle className="break-words pr-5">{editing ? "Edit service request" : selected?.title}</DialogTitle><DialogDescription>{selected?.assets?.asset_id} · {selected?.assets?.name}</DialogDescription></DialogHeader>{editing ? <ServiceRequestForm key={editing.id} request={editing} onSavingChange={setSaving} onDone={()=>setEditing(null)} onCancel={cancelEdit}/> : selected && <>
+      <div className="flex justify-end"><Button variant="outline" onClick={()=>setEditing({...selected})}><Pencil className="size-4"/>Edit request / status</Button></div>
       <div className="flex flex-wrap gap-2"><RequestStatus value={selected.status}/><Badge variant="secondary">{selected.source === "qr" ? "QR label" : pretty(selected.source)}</Badge><Badge variant="outline">{pretty(selected.maintenance_type)}</Badge></div>
-      <dl className="grid grid-cols-2 gap-4 border-y border-border py-4">{[["Reported",new Date(selected.created_at).toLocaleString("en-IN")],["Recorded cost",money.format(selected.cost)],["Next maintenance",selected.next_maintenance_date ? date(selected.next_maintenance_date) : "Not scheduled"],["Asset",selected.assets?.name ?? "—"]].map(([label,value])=><div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 break-words text-sm font-medium">{value}</dd></div>)}</dl>
+      <dl className="grid grid-cols-2 gap-4 border-y border-border py-4">{[["Reported",new Date(selected.created_at).toLocaleString("en-IN")],["Last updated",new Date(selected.updated_at).toLocaleString("en-IN")],["Recorded cost",money.format(selected.cost)],["Service provider",selected.service_provider || "—"],["Technician",selected.technician || "—"],["Service start",selected.start_date ? date(selected.start_date) : "Not scheduled"],["Completion date",selected.completion_date ? date(selected.completion_date) : "—"],["Next maintenance",selected.next_maintenance_date ? date(selected.next_maintenance_date) : "Not scheduled"],["Asset",selected.assets?.name ?? "—"]].map(([label,value])=><div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 break-words text-sm font-medium">{value}</dd></div>)}</dl>
       <div><h3 className="mb-2 text-sm font-semibold">Service / breakdown details</h3><p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{selected.remarks || "No additional details recorded."}</p></div>
+      {selected.parts_used && <div><h3 className="mb-2 text-sm font-semibold">Parts used / work performed</h3><p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{selected.parts_used}</p></div>}
       <div><h3 className="mb-3 flex items-center gap-2 text-sm font-semibold"><Camera className="size-4 text-primary"/>Reported photo</h3>{selected.photo_url && !photoFailed ? <img src={selected.photo_url} alt="Reported equipment breakdown" className="max-h-96 w-full rounded-lg bg-muted object-contain" onError={()=>setPhotoFailed(true)}/> : <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">{photoFailed ? "Photo could not be loaded. Refresh the request list and try again." : "No photo attached."}</p>}</div>
       <div className="border-t border-border pt-3"><p className="text-xs text-muted-foreground">Request reference</p><p className="mt-1 break-all font-mono text-xs">{selected.id}</p></div>
     </>}</DialogContent></Dialog>
