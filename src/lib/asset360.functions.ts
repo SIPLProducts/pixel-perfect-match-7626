@@ -106,12 +106,16 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name"),
       context.supabase.from("employees").select("id,full_name,employee_code,designation,status").eq("organization_id", organizationId).order("full_name"),
       context.supabase.from("asset_transfers").select("id,status,transfer_date,reason,remarks,from_location_id,to_location_id,from_employee_id,to_employee_id,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
-      context.supabase.from("maintenance_requests").select("id,title,status,maintenance_type,next_maintenance_date,cost,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(8),
+      context.supabase.from("maintenance_requests").select("id,title,status,maintenance_type,next_maintenance_date,cost,remarks,photo_path,source,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }),
       context.supabase.from("asset_verifications").select("id,status,verified_at,assets(asset_id,name)").eq("organization_id", organizationId).order("verified_at", { ascending: false }).limit(8),
     ]);
     const firstError = [organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications].find((result) => result.error)?.error;
     if (firstError) throw new Error(firstError.message);
-    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, assets: assets.data ?? [], categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: maintenance.data ?? [], verifications: verifications.data ?? [] };
+    const serviceRequests = await Promise.all((maintenance.data ?? []).map(async (request) => {
+      const photo = request.photo_path ? await context.supabase.storage.from("breakdown-photos").createSignedUrl(request.photo_path, 3600) : null;
+      return { ...request, photo_url: photo?.data?.signedUrl ?? null };
+    }));
+    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, assets: assets.data ?? [], categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [] };
   });
 
 async function validateAssetReferences(supabase: SupabaseClient<Database>, organizationId: string, data: z.infer<typeof assetSchema>) {
@@ -229,7 +233,12 @@ export const getPublicAsset = createServerFn({ method: "GET" })
     const url = process.env["SUPABASE_URL"];
     const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
     if (!url || !key) throw new Error("Public asset verification is unavailable");
-    const client = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
+    const client = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined }, global: { fetch: (input, init) => {
+      const headers = new Headers(init?.headers);
+      if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`) headers.delete("Authorization");
+      headers.set("apikey", key);
+      return fetch(input, { ...init, headers });
+    } } });
     const { data: asset, error } = await client.rpc("get_public_asset_details", { _token: data.token }).maybeSingle();
     if (error) throw new Error(error.message);
     return asset;
