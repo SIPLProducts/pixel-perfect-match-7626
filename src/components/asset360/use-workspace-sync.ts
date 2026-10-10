@@ -38,7 +38,7 @@ export function useWorkspaceSync(organizationId: string | undefined, userId: str
       setStatus(!navigator.onLine ? "Offline" : state === "SUBSCRIBED" ? "Live updates" : "Reconnecting");
       if (state === "SUBSCRIBED") schedule();
     });
-    const online = () => { setStatus("Reconnecting"); schedule(); };
+    const online = () => { setStatus(channel.state === "joined" ? "Live updates" : "Reconnecting"); schedule(); };
     const offline = () => setStatus("Offline");
     const visible = () => { if (document.visibilityState === "visible") schedule(); };
     if (!navigator.onLine) offline();
