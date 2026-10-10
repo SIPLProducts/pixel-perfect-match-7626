@@ -31,7 +31,7 @@ export async function labelQr(asset: LabelAsset) {
 export async function buildLabelsPdf(assets: LabelAsset[], size: LabelSize, organization: string) {
   if (!assets.length) throw new Error("Select at least one asset");
   const { width, height } = labelSizes[size];
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
   const margin = 10, gap = 3;
   const columns = Math.floor((210 - margin * 2 + gap) / (width + gap));
   const rows = Math.floor((297 - margin * 2 + gap) / (height + gap));
