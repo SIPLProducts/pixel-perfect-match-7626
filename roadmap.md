@@ -1,6 +1,6 @@
 # Sharvi Asset360 roadmap
 
-- [ ] Place QRmyCAR after Service requests and add fictional sample cars; verify the register
+- [x] Place QRmyCAR after Service requests and add fictional sample cars; verify the register
 
 - [x] Add QRmyCAR creation, editing, list, persistent QR labels and private parking-message inbox
 - [x] Verify car identity, public phone privacy and saved edits
