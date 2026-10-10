@@ -286,6 +286,51 @@ export type Database = {
           },
         ]
       }
+      asset_qr_prints: {
+        Row: {
+          action: string
+          asset_id: string
+          created_at: string
+          created_by: string
+          id: string
+          operation_id: string
+          organization_id: string
+        }
+        Insert: {
+          action: string
+          asset_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          operation_id: string
+          organization_id: string
+        }
+        Update: {
+          action?: string
+          asset_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          operation_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_qr_prints_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_qr_prints_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_transfers: {
         Row: {
           approved_by: string | null
@@ -1227,6 +1272,10 @@ export type Database = {
       process_asset_transfer: {
         Args: { _action: string; _transfer_id: string }
         Returns: Database["public"]["Enums"]["workflow_status"]
+      }
+      record_asset_qr_prints: {
+        Args: { _action: string; _asset_ids: string[]; _operation_id: string }
+        Returns: number
       }
       submit_qr_breakdown: {
         Args: {

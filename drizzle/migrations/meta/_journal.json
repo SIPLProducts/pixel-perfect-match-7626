@@ -78,6 +78,13 @@
       "when": 1791645590934,
       "tag": "0010_qualify_asset_document_storage_paths",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791645933380,
+      "tag": "0011_asset_qr_print_history",
+      "breakpoints": true
     }
   ]
 }

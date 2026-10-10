@@ -8,6 +8,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { assetSchema, updateAssetSchema, assetValues } from "@/lib/asset-form-schema";
 import { importAssetsSchema } from "@/lib/asset-import";
 import { readAllRows } from "@/lib/read-all-rows";
+import { qrPrintCounts, qrPrintSchema } from "@/lib/qr-print-tracking";
 
 const transferSchema = z.object({
   assetId: z.string().uuid(),
@@ -114,7 +115,9 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       readAllRows((from, to) => context.supabase.from("asset_events").select("id,event_type,summary,created_at,assets(asset_id,name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
     ]);
     const attachments = await readAllRows((from, to) => context.supabase.from("asset_attachments").select("id,asset_id,document_type,file_name,file_size,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to));
-    const firstError = [attachments, organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications, events].find((result) => result.error)?.error;
+    const prints = await readAllRows((from, to) => context.supabase.from("asset_qr_prints").select("asset_id").eq("organization_id", organizationId).order("id").range(from, to));
+    const printCounts = qrPrintCounts(prints.data ?? []);
+    const firstError = [prints, attachments, organization, profile, assets, categories, locations, departments, employees, transfers, maintenance, verifications, events].find((result) => result.error)?.error;
     if (firstError) throw new Error(firstError.message);
     const serviceRequests = [];
     for (let offset = 0; offset < (maintenance.data ?? []).length; offset += 6) {
@@ -124,7 +127,18 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       }));
       serviceRequests.push(...batch);
     }
-    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, attachments: attachments.data ?? [], assets: assets.data ?? [], categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
+    return { needsOnboarding: false as const, organization: organization.data, profile: profile.data, role: membership.role, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0 })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
+  });
+
+export const recordQrPrints = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => qrPrintSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: count, error } = await context.supabase.rpc("record_asset_qr_prints", {
+      _operation_id: data.operationId, _asset_ids: data.assetIds, _action: data.action,
+    });
+    if (error) throw new Error("Labels were prepared, but the QR print count could not be saved.");
+    return { count: count ?? 0 };
   });
 
 async function validateAssetReferences(supabase: SupabaseClient<Database>, organizationId: string, data: z.infer<typeof assetSchema>) {
