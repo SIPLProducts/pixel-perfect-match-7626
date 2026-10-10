@@ -14,7 +14,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedQrmycarRouteImport } from './routes/_authenticated/qrmycar'
 import { Route as ATokenRouteImport } from './routes/a.$token'
+import { Route as CarTokenRouteImport } from './routes/car.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,9 +42,19 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedQrmycarRoute = AuthenticatedQrmycarRouteImport.update({
+  id: '/qrmycar',
+  path: '/qrmycar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ATokenRoute = ATokenRouteImport.update({
   id: '/a/$token',
   path: '/a/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarTokenRoute = CarTokenRouteImport.update({
+  id: '/car/$token',
+  path: '/car/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -51,14 +63,18 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/qrmycar': typeof AuthenticatedQrmycarRoute
   '/a/$token': typeof ATokenRoute
+  '/car/$token': typeof CarTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/qrmycar': typeof AuthenticatedQrmycarRoute
   '/a/$token': typeof ATokenRoute
+  '/car/$token': typeof CarTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -67,13 +83,29 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/qrmycar': typeof AuthenticatedQrmycarRoute
   '/a/$token': typeof ATokenRoute
+  '/car/$token': typeof CarTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/reset-password' | '/dashboard' | '/a/$token'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/dashboard'
+    | '/qrmycar'
+    | '/a/$token'
+    | '/car/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/reset-password' | '/dashboard' | '/a/$token'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/dashboard'
+    | '/qrmycar'
+    | '/a/$token'
+    | '/car/$token'
   id:
     | '__root__'
     | '/'
@@ -81,7 +113,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/dashboard'
+    | '/_authenticated/qrmycar'
     | '/a/$token'
+    | '/car/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -90,6 +124,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ATokenRoute: typeof ATokenRoute
+  CarTokenRoute: typeof CarTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -129,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/qrmycar': {
+      id: '/_authenticated/qrmycar'
+      path: '/qrmycar'
+      fullPath: '/qrmycar'
+      preLoaderRoute: typeof AuthenticatedQrmycarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/a/$token': {
       id: '/a/$token'
       path: '/a/$token'
@@ -136,15 +178,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ATokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/car/$token': {
+      id: '/car/$token'
+      path: '/car/$token'
+      fullPath: '/car/$token'
+      preLoaderRoute: typeof CarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedQrmycarRoute: typeof AuthenticatedQrmycarRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedQrmycarRoute: AuthenticatedQrmycarRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -156,6 +207,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ATokenRoute: ATokenRoute,
+  CarTokenRoute: CarTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
