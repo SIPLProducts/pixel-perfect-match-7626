@@ -1,6 +1,6 @@
 # Sharvi Asset360 roadmap
 
-- [ ] Make service-request editing inline and verify save and cancel
+- [x] Make service-request editing inline and verify save and cancel
 
 - [x] Add and verify service request editing and persistent status updates
 
