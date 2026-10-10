@@ -113,6 +113,13 @@
       "when": 1791651399926,
       "tag": "0015_qrmycar_private_records",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791651658162,
+      "tag": "0016_tighten_qrmycar_grants",
+      "breakpoints": true
     }
   ]
 }
