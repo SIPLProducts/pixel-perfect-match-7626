@@ -19,8 +19,11 @@ export const labelSizes = {
 } as const;
 export type LabelSize = keyof typeof labelSizes;
 
-export function assetVerificationUrl(origin: string, token: string) {
-  return new URL(`/a/${token}`, origin).href;
+export const ASSET_PUBLIC_ORIGIN = "https://qrmyassets.siplproducts.com";
+
+export function assetVerificationUrl(_origin: string, token: string) {
+  // Printed labels must never encode an editor-only or localhost address.
+  return new URL(`/a/${encodeURIComponent(token)}`, ASSET_PUBLIC_ORIGIN).href;
 }
 
 export async function labelQr(asset: LabelAsset) {
