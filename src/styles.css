@@ -175,6 +175,22 @@
 }
 
 @layer components {
+  .car-public {
+    --background: oklch(0.975 0.003 230);
+    --foreground: oklch(0.3 0.035 250);
+    --card: oklch(1 0 0);
+    --primary: oklch(0.49 0.095 184);
+    --primary-foreground: oklch(0.99 0 0);
+    --muted: oklch(0.974 0.005 230);
+    --muted-foreground: oklch(0.49 0.025 250);
+    --border: oklch(0.9 0.013 230);
+    --input: oklch(0.87 0.018 230);
+    --ring: var(--primary);
+    --accent: oklch(0.95 0.025 184);
+    --accent-foreground: var(--primary);
+    --car-banner: linear-gradient(100deg, oklch(0.33 0.065 252), oklch(0.51 0.075 184));
+  }
+  .car-contact-banner { background: var(--car-banner); }
   .auth-photo-overlay { background: var(--auth-photo-overlay); }
   .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); box-shadow: var(--shadow-glass); backdrop-filter: blur(22px) saturate(140%); }
   .glass-strong { background: var(--glass-strong); border: 1px solid var(--glass-border); backdrop-filter: blur(24px) saturate(145%); }
