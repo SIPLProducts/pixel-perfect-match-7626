@@ -1,6 +1,6 @@
 # Sharvi Asset360 roadmap
 
-- [ ] Verify QRmyCAR database persistence and automatic updates across signed-in screens
+- [x] Verify QRmyCAR database persistence and automatic updates across signed-in screens
 
 - [x] Place QRmyCAR after Service requests and add fictional sample cars; verify the register
 
