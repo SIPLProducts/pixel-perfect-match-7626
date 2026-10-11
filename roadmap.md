@@ -1,5 +1,7 @@
 # Sharvi Asset360 roadmap
 
+- [x] Add adjustable car sticker dimensions, QR size and branding; verify matching preview, PDF dimensions and scannability
+
 - [x] Match car QR print stickers to the charcoal-and-gold reference and verify the downloaded PDF and QR destination
 
 - [x] Restore public car-number privacy in the page and data access; verify no owner-number exposure and saved private reports in the live inbox
