@@ -1,7 +1,7 @@
 # Sharvi Asset360 roadmap
 
-- [ ] Restore public car-number privacy in the page and data access; verify no owner-number exposure
-- [ ] Enable private communication through Sharvi’s WhatsApp Business account — requires business connection and approved templates
+- [x] Restore public car-number privacy in the page and data access; verify no owner-number exposure and saved private reports in the live inbox
+- [ ] Enable private communication through Sharvi’s WhatsApp Business account — connection declined; requires business connection, owner consent and approved templates
 
 - [x] Match public car contact to the supplied screenshot; verify contact choices, location, call and WhatsApp links; keep saved-message confirmation truthful
 - [ ] Connect WhatsApp Business and implement verified automatic owner notifications — connection skipped; requires business connection, owner consent and approved template

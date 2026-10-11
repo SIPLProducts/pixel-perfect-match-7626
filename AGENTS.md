@@ -27,7 +27,7 @@
 - Use one inline transfer form with shared validation; transfer edits lock the existing row, enforce tenant manager permissions and updated_at, preserve the asset and origin, reset approval, and record an asset event atomically.
 - Render the transfer register and per-asset history from the live tenant-filtered workspace data; resolve initiators from tenant-scoped profiles and keep completion routed through the existing assignment transaction.
 - Derive latest-transfer columns in the Asset register from the shared live transfer records; keep current location and custodian sourced from the asset row so pending movements never appear completed.
-- Keep car registers tenant-private; active token-scoped public car functions expose only contact and vehicle fields required for direct contact, while stable QR identities and concurrency checks protect car edits.
-- QRmyCAR uses its own protected content route and the shared workspace cache and subscriptions; public car contact remains a separate shareable route using validated E.164 numbers for direct call and WhatsApp links.
+- Keep car registers tenant-private; active token-scoped public car reads explicitly project vehicle and owner-name fields only, and direct-number RPC execution stays revoked to prevent disclosure.
+- QRmyCAR uses its own protected content route and the shared workspace cache and subscriptions; public reports use Sharvi-mediated messaging without direct owner phone links or visitor-number collection.
 - QRmyCAR contact reasons share validation between public forms and tenant inbox filters; optional consent-based coordinates travel inside the saved message with validated map links, preserving existing public token identities.
 - Scope the public car contact theme to its page and reuse persistent token contact actions and message validation; presentation changes must not imply an unconnected notification was delivered.
