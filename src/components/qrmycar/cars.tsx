@@ -1,13 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
-import { CarFront, Plus, Pencil, QrCode, Download, ArrowLeft, Search, ShieldCheck, MessageSquare, Check, LoaderCircle, MapPin, TriangleAlert, ExternalLink } from "lucide-react";
+import { CarFront, Plus, Pencil, QrCode, Download, Printer, ArrowLeft, Search, ShieldCheck, MessageSquare, Check, LoaderCircle, MapPin, TriangleAlert, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import type { WorkspaceData } from "@/components/asset360/workspace";
 import { carMessageMapUrl } from "@/lib/car-location";
 import { carSchema, parkingReasons } from "@/lib/car-schema";
 import { saveCar, acknowledgeCarMessage } from "@/lib/car.functions";
-import { carQr, carContactUrl, downloadCarLabel } from "@/lib/car-labels";
+import { carLabelImage, carContactUrl, downloadCarLabel, printCarLabel } from "@/lib/car-labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +61,13 @@ function CarForm({ car, onClose }: { car: Car | null; onClose: () => void }) {
 }
 function CarLabel({ car, onClose }: { car: Car | null; onClose: () => void }) {
  const [image, setImage] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
- useEffect(() => { let cancelled = false; setImage(""); setError(""); if (car) carQr(car.qr_token).then(url => { if (!cancelled) setImage(url); }).catch(() => { if (!cancelled) setError("Could not prepare the QR label"); }); return () => { cancelled = true; }; }, [car?.qr_token]);
- return <Dialog open={!!car} onOpenChange={open => { if (!open) onClose(); }}><DialogContent className="max-w-sm"><DialogHeader><DialogTitle>QRmyCAR label</DialogTitle><DialogDescription>{car?.registration_number} · {car?.active ? "Active" : "Inactive"}</DialogDescription></DialogHeader>{image ? <img src={image} alt="Car contact QR code" className="mx-auto aspect-square w-56 rounded-lg"/> : <p className="py-12 text-center">{error || "Preparing QR…"}</p>}{car && <><Button asChild variant="outline"><a href={carContactUrl(car.qr_token)} target="_blank" rel="noreferrer">Open public car page</a></Button><Button disabled={busy || !image} onClick={async () => { setBusy(true); try { await downloadCarLabel(car); } catch { setError("Could not download the label"); } finally { setBusy(false); } }}><Download/>Download label PDF</Button>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</>}</DialogContent></Dialog>;
+ useEffect(() => { let cancelled = false; setImage(""); setError(""); if (car) carLabelImage(car).then(url => { if (!cancelled) setImage(url); }).catch(() => { if (!cancelled) setError("Could not prepare the QR label"); }); return () => { cancelled = true; }; }, [car?.qr_token, car?.registration_number]);
+ async function output(action: "print" | "pdf") {
+  if (!car || busy) return;
+  setBusy(true); setError("");
+  try { if (action === "print") await printCarLabel(car); else await downloadCarLabel(car); }
+  catch (e) { setError(e instanceof Error ? e.message : "Could not prepare the label"); }
+  finally { setBusy(false); }
+ }
+ return <Dialog open={!!car} onOpenChange={open => { if (!open) onClose(); }}><DialogContent className="max-w-sm max-h-[90dvh] overflow-y-auto"><DialogHeader><DialogTitle>QRmyCAR label</DialogTitle><DialogDescription>{car?.registration_number} · {car?.active ? "Active" : "Inactive"} · 80 × 96 mm</DialogDescription></DialogHeader>{image ? <img src={image} alt="Car contact QR sticker" className="mx-auto aspect-[5/6] w-64 max-w-full"/> : <p className="py-12 text-center">{error || "Preparing QR…"}</p>}{car && <><Button asChild variant="outline"><a href={carContactUrl(car.qr_token)} target="_blank" rel="noreferrer">Open public car page</a></Button><div className="grid grid-cols-2 gap-2"><Button disabled={busy || !image} onClick={() => output("print")}><Printer/>Print label</Button><Button variant="outline" disabled={busy || !image} onClick={() => output("pdf")}><Download/>PDF</Button></div>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</>}</DialogContent></Dialog>;
 }

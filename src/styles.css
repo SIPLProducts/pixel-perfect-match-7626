@@ -77,6 +77,10 @@
 }
 
 :root {
+  --car-label-background: oklch(0.305 0.008 250);
+  --car-label-accent: oklch(0.79 0.125 88);
+  --car-label-paper: oklch(1 0 0);
+  --car-label-ink: oklch(0.2 0 0);
   --auth-surface: oklch(0.992 0.002 250);
   --auth-border: oklch(0.89 0.012 250);
   --auth-photo-text: oklch(0.99 0 0);
