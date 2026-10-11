@@ -29,3 +29,4 @@
 - Derive latest-transfer columns in the Asset register from the shared live transfer records; keep current location and custodian sourced from the asset row so pending movements never appear completed.
 - Keep car registers tenant-private; active token-scoped public car functions expose only contact and vehicle fields required for direct contact, while stable QR identities and concurrency checks protect car edits.
 - QRmyCAR uses its own protected content route and the shared workspace cache and subscriptions; public car contact remains a separate shareable route using validated E.164 numbers for direct call and WhatsApp links.
+- QRmyCAR contact reasons share validation between public forms and tenant inbox filters; optional consent-based coordinates travel inside the saved message with validated map links, preserving existing public token identities.

@@ -6,6 +6,6 @@ export const carSchema = z.object({
  manufactureYear: z.preprocess(v => v === "" || v === null ? undefined : v, z.coerce.number().int().min(1900).max(2100).optional()),
  parkingSlot: z.string().trim().max(80).default(""), remarks: z.string().trim().max(1000).default(""), active: z.boolean().default(true),
 });
-export const parkingReasons = { wrong_parking: "Wrong parking", blocked_access: "Blocking access", move_car: "Please move your car", reserved_slot: "Parked in someone else's slot", other: "Other concern" } as const;
-export const carMessageSchema = z.object({ token: z.string().uuid(), reason: z.enum(["wrong_parking", "blocked_access", "move_car", "reserved_slot", "other"]), message: z.string().trim().max(1000).default("") });
+export const parkingReasons = { wrong_parking: "Wrong parking", blocked_access: "Blocking access", move_car: "Please move your car", reserved_slot: "Parked in someone else's slot", emergency: "Vehicle emergency", other: "Other concern" } as const;
+export const carMessageSchema = z.object({ token: z.string().uuid(), reason: z.enum(["wrong_parking", "blocked_access", "move_car", "reserved_slot", "emergency", "other"]), message: z.string().trim().max(1000).default("") });
 export function carValues(d: z.infer<typeof carSchema>) { return { registration_number: d.registrationNumber, owner_name: d.ownerName, owner_mobile: d.ownerMobile, make: d.make, model: d.model, color: d.color, manufacture_year: d.manufactureYear ?? null, parking_slot: d.parkingSlot, remarks: d.remarks, active: d.active }; }
