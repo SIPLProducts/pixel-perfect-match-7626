@@ -1,6 +1,6 @@
 # Sharvi Asset360 roadmap
 
-- [ ] Add adjustable car sticker dimensions, QR size and branding; verify matching preview, PDF dimensions and scannability
+- [x] Add adjustable car sticker dimensions, QR size and branding; verify matching preview, PDF dimensions and scannability
 
 - [x] Match car QR print stickers to the charcoal-and-gold reference and verify the downloaded PDF and QR destination
 
