@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { registerAsset360ServiceWorker } from "@/lib/pwa";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -128,7 +129,10 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    import("@/lib/pwa").then(({ registerAsset360ServiceWorker }) => registerAsset360ServiceWorker());
+    // Offline support is optional and must never interrupt authentication.
+    void registerAsset360ServiceWorker().catch((error: unknown) => {
+      console.warn("Offline support could not be initialized.", error);
+    });
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       if (event === "SIGNED_OUT") queryClient.removeQueries({ queryKey: ["workspace"] });
