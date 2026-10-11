@@ -1,5 +1,7 @@
 # Sharvi Asset360 roadmap
 
+- [x] Verify QRmyCAR database persistence and automatic updates across signed-in screens
+
 - [x] Place QRmyCAR after Service requests and add fictional sample cars; verify the register
 
 - [x] Add QRmyCAR creation, editing, list, persistent QR labels and private parking-message inbox
