@@ -8,6 +8,8 @@ import { carMessageMapUrl } from "@/lib/car-location";
 import { carSchema, parkingReasons } from "@/lib/car-schema";
 import { saveCar, acknowledgeCarMessage } from "@/lib/car.functions";
 import { carLabelImage, carContactUrl, downloadCarLabel, printCarLabel } from "@/lib/car-labels";
+import { carLabelLayout, carLabelPresets, defaultCarLabelSettings, type CarLabelSettings } from "@/lib/car-label-settings";
+import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,13 +63,45 @@ function CarForm({ car, onClose }: { car: Car | null; onClose: () => void }) {
 }
 function CarLabel({ car, onClose }: { car: Car | null; onClose: () => void }) {
  const [image, setImage] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
- useEffect(() => { let cancelled = false; setImage(""); setError(""); if (car) carLabelImage(car).then(url => { if (!cancelled) setImage(url); }).catch(() => { if (!cancelled) setError("Could not prepare the QR label"); }); return () => { cancelled = true; }; }, [car?.qr_token, car?.registration_number]);
+ const [settings, setSettings] = useState<CarLabelSettings>(defaultCarLabelSettings);
+ const [widthInput, setWidthInput] = useState("80"); const [heightInput, setHeightInput] = useState("96");
+ const validDimensions = [widthInput, heightInput].every(v => v.trim() !== "" && Number.isFinite(Number(v)) && Number(v) >= 40 && Number(v) <= 200);
+ const preset = Object.entries(carLabelPresets).find(([, value]) => value.width === settings.width && value.height === settings.height)?.[0] ?? "custom";
+ const qrMillimeters = carLabelLayout(settings).qr.size.toFixed(1);
+ function dimensions(key: "width" | "height", value: string) {
+  if (key === "width") setWidthInput(value); else setHeightInput(value);
+  if (value.trim() && Number.isFinite(Number(value)) && Number(value) >= 40 && Number(value) <= 200) setSettings(s => ({ ...s, [key]: Number(value) }));
+ }
+ function reset() { setSettings(defaultCarLabelSettings); setWidthInput("80"); setHeightInput("96"); }
+ useEffect(() => {
+  let cancelled = false; setImage(""); setError("");
+  const timer = window.setTimeout(() => {
+   if (car) carLabelImage(car, settings).then(url => { if (!cancelled) setImage(url); }).catch(() => { if (!cancelled) setError("Could not prepare the QR label"); });
+  }, 150);
+  return () => { cancelled = true; window.clearTimeout(timer); };
+ }, [car?.qr_token, car?.registration_number, settings]);
  async function output(action: "print" | "pdf") {
-  if (!car || busy) return;
+  if (!car || busy || !validDimensions || !image) return;
   setBusy(true); setError("");
-  try { if (action === "print") await printCarLabel(car); else await downloadCarLabel(car); }
+  try { if (action === "print") await printCarLabel(car, settings); else await downloadCarLabel(car, settings); }
   catch (e) { setError(e instanceof Error ? e.message : "Could not prepare the label"); }
   finally { setBusy(false); }
  }
- return <Dialog open={!!car} onOpenChange={open => { if (!open) onClose(); }}><DialogContent className="max-w-sm max-h-[90dvh] overflow-y-auto"><DialogHeader><DialogTitle>QRmyCAR label</DialogTitle><DialogDescription>{car?.registration_number} · {car?.active ? "Active" : "Inactive"} · 80 × 96 mm</DialogDescription></DialogHeader>{image ? <img src={image} alt="Car contact QR sticker" className="mx-auto aspect-[5/6] w-64 max-w-full"/> : <p className="py-12 text-center">{error || "Preparing QR…"}</p>}{car && <><Button asChild variant="outline"><a href={carContactUrl(car.qr_token)} target="_blank" rel="noreferrer">Open public car page</a></Button><div className="grid grid-cols-2 gap-2"><Button disabled={busy || !image} onClick={() => output("print")}><Printer/>Print label</Button><Button variant="outline" disabled={busy || !image} onClick={() => output("pdf")}><Download/>PDF</Button></div>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</>}</DialogContent></Dialog>;
+ return <Dialog open={!!car} onOpenChange={open => { if (!open && !busy) onClose(); }}><DialogContent className="sm:max-w-2xl max-h-[90dvh] overflow-y-auto"><DialogHeader><DialogTitle>QRmyCAR print settings</DialogTitle><DialogDescription>{car?.registration_number} · {car?.active ? "Active" : "Inactive"} · {settings.width} × {settings.height} mm</DialogDescription></DialogHeader>
+  <div className="grid gap-6 sm:grid-cols-2">
+   <fieldset disabled={busy} className="min-w-0 space-y-5">
+    <div className="space-y-2"><Label htmlFor="car-label-preset">Sticker size</Label><Select value={preset} disabled={busy} onValueChange={value => {
+     const choice = Object.entries(carLabelPresets).find(([key]) => key === value)?.[1];
+     if (choice) { setSettings(s => ({ ...s, width: choice.width, height: choice.height })); setWidthInput(String(choice.width)); setHeightInput(String(choice.height)); }
+    }}><SelectTrigger id="car-label-preset" className="w-full"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(carLabelPresets).map(([key, value]) => <SelectItem key={key} value={key}>{value.name}</SelectItem>)}<SelectItem value="custom">Custom dimensions</SelectItem></SelectContent></Select></div>
+    <div className="grid grid-cols-2 gap-3"><div className="space-y-2"><Label htmlFor="car-label-width">Width (mm)</Label><Input id="car-label-width" type="number" min={40} max={200} step="0.1" value={widthInput} aria-invalid={!validDimensions} onChange={e => dimensions("width", e.target.value)}/></div><div className="space-y-2"><Label htmlFor="car-label-height">Height (mm)</Label><Input id="car-label-height" type="number" min={40} max={200} step="0.1" value={heightInput} aria-invalid={!validDimensions} onChange={e => dimensions("height", e.target.value)}/></div></div>
+    {!validDimensions && <p role="alert" className="text-sm text-destructive">Enter dimensions between 40 and 200 mm.</p>}
+    <div className="space-y-3"><div className="flex justify-between gap-2"><Label htmlFor="car-label-qr">QR size</Label><span className="text-xs tabular-nums text-muted-foreground">{settings.qrScale}% · {qrMillimeters} mm</span></div><Slider id="car-label-qr" aria-label="QR size" disabled={busy} min={60} max={100} step={1} value={[settings.qrScale]} onValueChange={([v]) => { if (v !== undefined) setSettings(s => ({ ...s, qrScale: v })); }}/></div>
+    <div className="space-y-3"><div className="flex justify-between gap-2"><Label htmlFor="car-label-branding">Sharvi branding size</Label><span className="text-xs tabular-nums text-muted-foreground">{settings.brandingScale}%</span></div><Slider id="car-label-branding" aria-label="Sharvi branding size" disabled={busy} min={70} max={140} step={1} value={[settings.brandingScale]} onValueChange={([v]) => { if (v !== undefined) setSettings(s => ({ ...s, brandingScale: v })); }}/></div>
+    <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={reset}>Reset settings</Button>
+   </fieldset>
+   <div className="flex min-h-72 min-w-0 flex-col items-center justify-center gap-3 bg-muted/40 p-3">{image ? <img src={image} alt="Car contact QR sticker" className="max-h-80 max-w-full object-contain"/> : <p className="py-12 text-center text-sm">{error || "Preparing QR…"}</p>}<p className="text-xs tabular-nums text-muted-foreground">{settings.width} × {settings.height} mm</p></div>
+  </div>
+  {car && <><div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4"><Button asChild variant="link" className="h-auto px-0 text-xs"><a href={carContactUrl(car.qr_token)} target="_blank" rel="noreferrer">Open public car page<ExternalLink className="size-3"/></a></Button><div className="flex gap-2"><Button disabled={busy || !image || !validDimensions} onClick={() => output("print")}><Printer/>Print label</Button><Button variant="outline" disabled={busy || !image || !validDimensions} onClick={() => output("pdf")}><Download/>PDF</Button></div></div>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</>}
+ </DialogContent></Dialog>;
 }
