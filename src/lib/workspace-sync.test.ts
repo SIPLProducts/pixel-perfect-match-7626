@@ -16,6 +16,13 @@ test("all existing records are retained beyond the first page", async () => {
   const result = await readAllRows(async (from, to) => ({ data: records.slice(from, to + 1), error: null }));
   assert.deepEqual(result.data, records);
 });
+test("QRmyCAR subscribes to both saved cars and parking messages exactly once per tenant", () => {
+  for (const table of ["cars", "car_messages"]) {
+    const subscriptions = workspaceSubscriptions("car-workspace", "car-user").filter(item => item.table === table);
+    assert.equal(subscriptions.length, 1);
+    assert.equal(subscriptions[0]?.filter, "organization_id=eq.car-workspace");
+  }
+});
 test("a failed page never returns a misleading partial register", async () => {
   await assert.rejects(readAllRows(async () => ({ data: null, error: { message: "Unavailable" } })), /Unavailable/);
 });
