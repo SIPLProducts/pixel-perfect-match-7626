@@ -1,5 +1,8 @@
 # Sharvi Asset360 roadmap
 
+- [ ] Review official QRmyCAR features and implement relevant car-screen and public-contact improvements
+- [ ] Verify QRmyCAR reference-inspired workflows and retain existing identities and live updates
+
 - [x] Verify QRmyCAR database persistence and automatic updates across signed-in screens
 
 - [x] Place QRmyCAR after Service requests and add fictional sample cars; verify the register
