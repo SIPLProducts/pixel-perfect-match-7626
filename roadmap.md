@@ -1,7 +1,7 @@
 # Sharvi Asset360 roadmap
 
-- [ ] Match public car contact to the supplied screenshot and verify public report confirmation
-- [ ] Connect WhatsApp Business and implement verified automatic owner notifications — requires business connection and approved template
+- [x] Match public car contact to the supplied screenshot; verify contact choices, location, call and WhatsApp links; keep saved-message confirmation truthful
+- [ ] Connect WhatsApp Business and implement verified automatic owner notifications — connection skipped; requires business connection, owner consent and approved template
 
 - [x] Review official QRmyCAR features and implement emergency alerts, consent-based location sharing, and inbox search/status/reason filters; retain direct contact
 - [x] Verify QRmyCAR reference-inspired workflows and retain existing identities and live updates
