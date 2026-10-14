@@ -70,3 +70,4 @@
 - [ ] Validate remaining onboarding and lifecycle workflows — awaiting their screen-by-screen review
 
 - [x] Improve Service requests totals, filters, request register, and detailed photo review without changing request workflows
+- [x] Categories module: searchable list, add/edit, delete blocked when assets reference it (race-safe database guard)
