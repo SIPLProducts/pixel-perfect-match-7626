@@ -73,3 +73,4 @@
 - [x] Categories module: searchable list, add/edit, delete blocked when assets reference it (race-safe database guard)
 
 - [x] Locations module: add, edit, deactivate, hierarchy checks, delete safeguard, inactive locations hidden from new choices
+- [x] Employees module: add, edit, search, deactivate/reactivate, duplicate codes, manager loops, delete safeguard, inactive employees hidden from new choices
