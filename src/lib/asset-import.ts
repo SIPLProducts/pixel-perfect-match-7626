@@ -50,7 +50,9 @@ export function validateImportRows(rows: string[][], masters: ImportMasters): Im
       const value = get(label); if (!value && !required) return undefined;
       const matches = records.filter(item => normalize(item.name) === normalize(value));
       if (matches.length !== 1) { errors.push(`${label}: select an existing, unambiguous name`); return undefined; }
-      return matches[0]?.id;
+      const match = matches[0] as (Master & { status?: string | null }) | undefined;
+      if (match && match.status && match.status !== "active") { errors.push(`${label}: "${value}" is inactive`); return undefined; }
+      return match?.id;
     };
     const employee = get("Custodian code");
     const employeeId = employee ? masters.employees.find(item => normalize(item.employee_code) === normalize(employee))?.id : undefined;
