@@ -148,6 +148,13 @@
       "when": 1791978882479,
       "tag": "0020_block_used_category_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791981349760,
+      "tag": "0021_block_referenced_location_delete",
+      "breakpoints": true
     }
   ]
 }
