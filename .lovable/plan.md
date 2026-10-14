@@ -13,7 +13,7 @@
 - A searchable table showing Code, Name, Type, Parent location and Status, plus a count of assets and child locations. You can search by code, name, type or parent, and filter by status.
 - Add and edit forms on the same page, styled like the Categories page. Fields: Code (required, 2 to 20 letters, digits or dashes, saved in uppercase), Name (required, 2 to 100 characters), Type (required), Parent (optional) and Status (Active or Inactive).
 - **Deactivate instead of delete.** There's no hard delete. A Deactivate button sets the location to Inactive, and Reactivate switches it back. Assets, child locations, transfers and history all keep their links.
-- Inactive locations stay visible in existing records. They're hidden only from new choices in the asset and transfer forms. That filter lives in the Locations-owned list, not in those forms' logic. The forms themselves stay unchanged: they keep showing whatever list they get. If you'd rather leave them fully untouched, I'll skip this step.
+- Inactive locations stay visible in existing records and are hidden only from new choices. Details are in the "Inactive locations" section below.
 - Only super admin, admin, asset manager and facility manager can add, edit or deactivate. Other users see the list read-only.
 - Success and error messages, loading states, and an automatic refresh after every change.
 
@@ -24,8 +24,53 @@
 - The parent must belong to the same organization. A location can't be its own parent or sit under one of its own children: the server walks up the parent chain to check.
 - A location can't be deactivated while it has active child locations or an open (pending or approved) transfer to it. The message explains what to do first.
 
-## Proposed database change (needs your OK)
-Even though the screen offers no delete, the current access rule still lets any member hard-delete a location from outside the app. That would silently unlink assets and child locations. I propose one small safeguard, like the one on Categories: a rule that refuses to delete a location that assets, departments, employees, child locations, transfers, assignments or verifications still use. There are no table, column or access-rule changes. If you decline, I'll skip it and rely on the server rules only.
+## Database change (approved by you, applied first)
+The screen offers no delete, but the current access rule still lets any member hard-delete a location from outside the app. Today that would silently clear the links on assets, departments, employees and child locations.
+
+**Confirmation 1:** I'll add one rule that runs before any location is deleted. It refuses the delete with the message "Location is used by other records" if any of these still point at the location:
+- assets
+- departments
+- employees
+- child locations
+- transfers (either from or to the location)
+- assignments
+- verification records
+
+The rule checks every row, after the database has locked the location, so a record saved at the same moment is also caught. Locations that nothing uses can still be deleted. Nothing else changes: no tables, columns, links or access rules, and no existing data.
+
+```sql
+create function public.prevent_referenced_location_delete() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if exists (select 1 from public.assets where location_id = old.id)
+  or exists (select 1 from public.departments where location_id = old.id)
+  or exists (select 1 from public.employees where location_id = old.id)
+  or exists (select 1 from public.locations where parent_id = old.id)
+  or exists (select 1 from public.asset_transfers where from_location_id = old.id or to_location_id = old.id)
+  or exists (select 1 from public.asset_assignments where location_id = old.id)
+  or exists (select 1 from public.asset_verifications where confirmed_location_id = old.id) then
+    raise exception 'Location is used by other records' using errcode = '23503';
+  end if;
+  return old;
+end $$;
+revoke all on function public.prevent_referenced_location_delete() from public, anon, authenticated;
+create trigger locations_block_referenced_delete before delete on public.locations
+for each row execute function public.prevent_referenced_location_delete();
+```
+
+## Inactive locations (confirmation 2)
+Inactive locations are hidden from new choices only:
+- **Asset form (add or edit):** the location list shows active locations, plus the asset's current location if it is inactive, so saving an edit never drops it.
+- **Transfer form:** the destination list shows active locations, plus the current destination when you edit an existing transfer.
+- **Excel import:** a row naming an inactive location is rejected with a clear message. Saved assets are not affected.
+- **Locations form:** an inactive location can't be chosen as a new parent.
+
+Inactive locations still display everywhere they are already used, because those screens read the saved link and not the active list:
+- the asset register, asset details and current-location columns
+- transfer from/to, transfer history and latest-transfer columns
+- dashboard and register filters, reports and exports
+
+The only changes to the asset form, transfer form and Excel import are these one-line list filters. Their other logic stays the same.
 
 ## Not changed
 Employees, Categories, asset/transfer/import logic, reports and QR workflows.
@@ -44,5 +89,6 @@ Employees, Categories, asset/transfer/import logic, reports and QR workflows.
   - `src/components/asset360/locations.tsx`.
 - `workspace.tsx`: render `<Locations data={data}/>` on the locations tab and hide the dummy PageActions there.
 - `asset360.functions.ts`: add `parent_id,status` to the locations select.
-- Optional migration: a BEFORE DELETE trigger, `locations_block_referenced_delete`, raising 23503; its function is revoked from public, anon and authenticated.
-- AGENTS.md: one rule for Locations.
+- Shared helper `selectableLocations(locations, keepId?)` in `location-schema.ts`, with tests. It is used by the asset form, the transfer form and the Excel import location lookup (the lookup reports a row error for an inactive location).
+- The migration above is applied through the migration tool, then checked directly: deleting a location that is in use fails with 23503.
+- AGENTS.md: one rule for Locations. roadmap.md: the Locations task and these two confirmations.
