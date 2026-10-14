@@ -33,3 +33,4 @@
 - QRmyCAR contact reasons share validation between public forms and tenant inbox filters; optional consent-based coordinates travel inside the saved message with validated map links, preserving existing public token identities.
 - Scope the public car contact theme to its page and reuse persistent token contact actions and message validation; presentation changes must not imply an unconnected notification was delivered.
 - Render car sticker previews, PDFs and print output from one client-side label renderer with shared validated settings and millimeter layout calculations, so selected dimensions and scaling match physical output without changing persistent QR identities.
+- Category create/edit/delete run through authenticated server functions that derive the tenant from user_roles and restrict to manager roles; a database delete trigger blocks removing categories referenced by assets, because the asset foreign key would otherwise silently unlink them.
