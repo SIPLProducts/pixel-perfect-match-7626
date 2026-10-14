@@ -31,6 +31,18 @@
 ## Database change (needs your approval, applied first)
 Same safeguard as Locations. The screen offers no delete, but the current access rule still allows a hard delete from outside the app, which would silently clear asset custodians and manager links. One rule will refuse deleting an employee still used by assets, other employees (as manager), transfers or assignments, with the message "Employee is used by other records". No tables, columns, links, access rules or data change.
 
+**Confirmation 1 (coverage, checked against the database):** exactly five links point at an employee, and the rule covers all five:
+- assets: assigned custodian
+- employees: manager
+- transfers: from employee and to employee
+- assignment history: employee
+
+Verification records, service requests and QR print history store user accounts, not employees, so they are unaffected. Employees nothing uses can still be deleted.
+
+**Confirmation 2 (inactive employees):** excluded only from new choices (asset custodian, transfer new custodian, manager list, Excel import codes), with the current person kept selectable when editing so saves never drop them. Asset register, asset details, transfer from/to, transfer history, reports and exports read the saved link and keep showing the name.
+
+Approving this plan approves this migration; it is applied first, then tested directly before any screen changes.
+
 ```sql
 create function public.prevent_referenced_employee_delete() returns trigger
 language plpgsql set search_path = public as $$
