@@ -15,6 +15,8 @@ test("code is required, uppercased, 2-20 letters/digits/dashes; name required", 
   assert.equal(employeeSchema.safeParse({ code: "EMP1", fullName: "" }).success, false);
   assert.equal(employeeSchema.safeParse({ code: "EMP1", fullName: "Ravi", email: "bad" }).success, false);
   assert.equal(employeeSchema.parse({ code: "EMP1", fullName: "Ravi", email: "" }).email, null);
+  const once = employeeSchema.parse({ code: "EMP1", fullName: "Ravi" });
+  assert.equal(employeeSchema.safeParse(once).success, true); // server re-validates client-parsed values
 });
 
 test("duplicate codes detected case-insensitively, ignoring the edited row", () => {

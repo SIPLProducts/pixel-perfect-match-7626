@@ -5,14 +5,14 @@ export const canManageEmployees = (role?: string | null) => !!role && employeeRo
 export const employeeStatuses = ["active", "inactive"] as const;
 export const normalizeEmployeeCode = (value: string) => value.trim().toUpperCase();
 
-const optionalText = (max: number, label: string) => z.string().trim().max(max, `${label} must be ${max} characters or fewer`).optional().transform((v) => v || null);
+const optionalText = (max: number, label: string) => z.string().trim().max(max, `${label} must be ${max} characters or fewer`).nullish().transform((v) => v || null);
 const optionalId = z.string().uuid().nullable().optional().transform((v) => v ?? null);
 
 export const employeeSchema = z.object({
   code: z.string().transform(normalizeEmployeeCode).pipe(z.string().regex(/^[A-Z0-9-]{2,20}$/, "Code must be 2–20 letters, digits or dashes")),
   fullName: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name must be 100 characters or fewer"),
-  email: z.string().trim().max(255).optional().transform((v) => v || null).pipe(z.string().email("Enter a valid email").nullable()),
-  mobile: z.string().trim().optional().transform((v) => v || null).pipe(z.string().regex(/^\+?[0-9 -]{7,20}$/, "Enter a valid mobile number").nullable()),
+  email: z.string().trim().max(255).nullish().transform((v) => v || null).pipe(z.string().email("Enter a valid email").nullable()),
+  mobile: z.string().trim().nullish().transform((v) => v || null).pipe(z.string().regex(/^\+?[0-9 -]{7,20}$/, "Enter a valid mobile number").nullable()),
   designation: optionalText(100, "Designation"),
   departmentId: optionalId,
   locationId: optionalId,
