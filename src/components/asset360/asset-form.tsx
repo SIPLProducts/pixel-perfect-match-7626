@@ -1,3 +1,4 @@
+import { selectableLocations } from "@/lib/location-schema";
 import { useState, useRef, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -72,7 +73,7 @@ export function AssetForm({ data, asset, onClose }: { data: WorkspaceData; asset
     <form noValidate onSubmit={event => { event.preventDefault(); mutation.mutate(); }}>
       <fieldset disabled={mutation.isPending}>
         {section("Asset identification", <>{input("name", "Asset description / name *", "text", 120)}{select("categoryId", "Category *", data.categories)}{input("serialNumber", "Serial number")}{input("manufacturer", "Manufacturer")}{input("model", "Equipment / model")}{input("companyCode", "Company code", "text", 50)}</>)}
-        {section("Location & ownership", <>{input("plant", "Plant")}{select("locationId", "Location", data.locations, true)}{select("departmentId", "Department", data.departments, true)}{select("employeeId", "Custodian", data.employees.map(x => ({ id: x.id, name: x.full_name })), true)}</>)}
+        {section("Location & ownership", <>{input("plant", "Plant")}{select("locationId", "Location", selectableLocations(data.locations, asset?.location_id), true)}{select("departmentId", "Department", data.departments, true)}{select("employeeId", "Custodian", data.employees.map(x => ({ id: x.id, name: x.full_name })), true)}</>)}
         {section("Value & lifecycle", <>{input("purchaseValue", "Cumulative acquisition value", "number")}{input("currentValue", "Ending book value", "number")}{input("installationDate", "Capitalized on / installation date", "date")}{input("warrantyEnd", "Warranty end", "date")}{select("status", "Status", assetSchema.shape.status.options.map(id => ({ id, name: id.replaceAll("_", " ") })))}{select("condition", "Condition", assetSchema.shape.condition.options.map(id => ({ id, name: id })))}</>)}
         {["ERP identification", "Depreciation & life", "Financial movements", "Additional references"].map(title => <div key={title}>{section(title, assetErpFields.filter(field => field.section === title).map(field => input(field.key, field.label, field.type)))}</div>)}
         <AssetDocumentPicker pending={pendingDocuments} onChange={documents => { setPendingDocuments(documents); setDirty(true); }} existing={data.attachments.filter(document => document.asset_id === (asset?.id ?? savedAsset.current?.id))} />
