@@ -15,6 +15,7 @@ import { ServiceRequests } from "@/components/asset360/service-requests";
 import { Transfers } from "./transfers";
 import { Categories } from "./categories";
 import { Locations } from "./locations";
+import { Employees } from "./employees";
 import { Cars } from "@/components/qrmycar/cars";
 import { latestAssetTransfers } from "@/lib/asset-transfer-summary";
 import { LabelDialog } from "@/components/asset360/label-dialog";
@@ -67,7 +68,7 @@ export function Workspace({ carPage = false }: { carPage?: boolean }) {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">Operations center</p><h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{importOpen ? "Import assets" : assetDialog ? editingAsset ? "Edit asset" : "Add asset" : title[0]}</h1>{!assetDialog && !importOpen && <p className="mt-1 text-sm text-muted-foreground">{title[1]}</p>}</div>{!carPage && !assetDialog && !importOpen && <PageActions active={active} onImport={()=>setImportOpen(true)} setAssetDialog={()=>{setEditingAsset(null);setActive("assets");setAssetDialog(true)}} data={data} assets={data.assets}/>}</div>
         {importOpen && <AssetImport data={data} onClose={()=>setImportOpen(false)}/>}
         {assetDialog && <AssetForm key={editingAsset?.id ?? "new"} data={data} asset={editingAsset} onClose={()=>{setAssetDialog(false);setEditingAsset(null)}}/>}
-        <div hidden={assetDialog || importOpen}>{carPage ? <Cars data={data}/> : active === "dashboard" ? <Dashboard data={data} setActive={setActive} onAsset={setSelectedAsset}/> : active === "assets" ? <Assets data={data} assets={filtered} search={search} setSearch={setSearch} onAsset={setSelectedAsset} setAssetDialog={setAssetDialog} onEdit={asset=>{setEditingAsset(asset);setAssetDialog(true)}}/> : active === "maintenance" ? <ServiceRequests data={data}/> : active === "transfers" ? <Transfers data={data}/> : active === "categories" ? <Categories data={data}/> : active === "locations" ? <Locations data={data}/> : <ModulePage id={active} data={data}/>}</div> 
+        <div hidden={assetDialog || importOpen}>{carPage ? <Cars data={data}/> : active === "dashboard" ? <Dashboard data={data} setActive={setActive} onAsset={setSelectedAsset}/> : active === "assets" ? <Assets data={data} assets={filtered} search={search} setSearch={setSearch} onAsset={setSelectedAsset} setAssetDialog={setAssetDialog} onEdit={asset=>{setEditingAsset(asset);setAssetDialog(true)}}/> : active === "maintenance" ? <ServiceRequests data={data}/> : active === "transfers" ? <Transfers data={data}/> : active === "categories" ? <Categories data={data}/> : active === "locations" ? <Locations data={data}/> : active === "employees" ? <Employees data={data}/> : <ModulePage id={active} data={data}/>}</div> 
       </main>
     </div>
     {carPage ? <div className="fixed inset-x-3 bottom-3 z-40 lg:hidden"><Button asChild variant="secondary" className="w-full"><Link to="/dashboard">Back to Asset360</Link></Button></div> : <MobileNav active={active} setActive={setActive}/>}
@@ -163,7 +164,7 @@ function PageActions({active,setAssetDialog,assets,onImport,data}:{active:string
   const exportAssets=()=>{const escape=(value:unknown)=>`"${String(value??"").replaceAll('"','""')}"`;const headings=["Asset ID","Name","Serial Number","Plant","Company Code","Status","Acquisition Value","Book Value"];const rows=assets.map(a=>[a.asset_id,a.name,a.serial_number,a.plant,a.company_code,a.status,a.purchase_value,a.current_value]);const blob=new Blob([[headings,...rows].map(row=>row.map(escape).join(",")).join("\n")],{type:"text/csv;charset=utf-8"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="asset360-assets.csv";link.click();URL.revokeObjectURL(link.href);};
   if(active==="assets") return <div className="flex flex-wrap gap-2"><Button variant="glass" onClick={exportAssets}><Download/>Export</Button><Button variant="outline" onClick={downloadTemplate} disabled={downloading}>{downloading?<LoaderCircle className="animate-spin"/>:<FileSpreadsheet/>}Download Excel template</Button><Button variant="outline" onClick={onImport}><Upload/>Upload Excel</Button><Button variant="hero" onClick={()=>setAssetDialog(true)}><PackagePlus/>Add asset</Button></div>;
   if(active==="dashboard") return <Button variant="hero" onClick={()=>setAssetDialog(true)}><PackagePlus/>Add asset</Button>;
-  if(active==="transfers"||active==="categories"||active==="locations") return null;
+  if(active==="transfers"||active==="categories"||active==="locations"||active==="employees") return null;
   return <Button variant="glass" onClick={()=>toast.info(`${pageCopy[active]?.[0]??"This area"} is ready for organization records`)}><Download/>Export view</Button>;
 }
 
