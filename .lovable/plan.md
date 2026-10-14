@@ -27,6 +27,25 @@ Edited
 - `src/components/asset360/workspace.tsx` — render `<Categories data={data}/>` for the categories tab and hide the generic header action there. Nothing else changes.
 - `AGENTS.md`, `roadmap.md` — one rule each.
 
-No database changes. Known small residual race: an asset created in the same instant as a delete could be unlinked by the existing SET NULL rule; closing it fully would need a database guard, which I'll only add if you approve.
+### Deletion race assessment
+- Race: the server counts 0 assets, then another user saves/imports an asset into that category, then the delete runs. The existing ON DELETE SET NULL rule silently clears that asset's category.
+- App-only mitigations (no migration): count check before delete, delete filtered by id + organization, disable Delete in the UI when used, and re-check assets after the delete to report any unlinked ones. These shrink the window to milliseconds but cannot close it: the app cannot make "check" and "delete" one atomic step, and an unlinked asset cannot be restored automatically.
+- Full fix needs one small, additive database guard: a BEFORE DELETE trigger on categories that raises "Category is used by assets" when any asset references it. It runs after the database locks the category row, so it sees concurrently committed assets. No tables, columns, constraints, policies, or existing relationships change; asset forms, Excel import and QR flows are unaffected. Removable later with no data impact.
+
+```sql
+create function public.prevent_used_category_delete() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if exists (select 1 from public.assets where category_id = old.id) then
+    raise exception 'Category is used by assets' using errcode = '23503';
+  end if;
+  return old;
+end $$;
+create trigger asset_categories_block_used_delete
+before delete on public.asset_categories
+for each row execute function public.prevent_used_category_delete();
+```
+
+Recommendation: add the guard (applied only after your approval of this plan). If declined, ship the app-only mitigations and accept the documented residual risk.
 
 Testing: bun tests above; Playwright signed-in run — add, duplicate name/prefix rejected, bad prefix rejected, edit, delete blocked for a used category, delete of an unused category succeeds, search; confirm asset form category list, Excel import and existing asset IDs are unchanged. Temporary test categories removed afterwards.
