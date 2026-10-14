@@ -30,7 +30,7 @@ const headerAliases: Record<string, string> = {
   "installation date": "capitalized on / installation date",
 };
 type Master = { id: string; name: string };
-export type ImportMasters = { categories: Master[]; locations: Master[]; departments: Master[]; employees: { id: string; employee_code: string }[]; assets: { serial_number: string | null }[] };
+export type ImportMasters = { categories: Master[]; locations: Master[]; departments: Master[]; employees: { id: string; employee_code: string; status?: string | null }[]; assets: { serial_number: string | null }[] };
 export type ImportRow = { row: number; name: string; category: string; serial: string; errors: string[]; data?: z.infer<typeof assetSchema> };
 const normalize = (value: string) => value.trim().toLowerCase();
 
@@ -55,8 +55,11 @@ export function validateImportRows(rows: string[][], masters: ImportMasters): Im
       return match?.id;
     };
     const employee = get("Custodian code");
-    const employeeId = employee ? masters.employees.find(item => normalize(item.employee_code) === normalize(employee))?.id : undefined;
-    if (employee && !employeeId) errors.push("Custodian code: employee not found");
+    const employeeMatch = employee ? masters.employees.find(item => normalize(item.employee_code) === normalize(employee)) : undefined;
+    const employeeInactive = !!employeeMatch?.status && employeeMatch.status !== "active";
+    const employeeId = employeeInactive ? undefined : employeeMatch?.id;
+    if (employee && !employeeMatch) errors.push("Custodian code: employee not found");
+    if (employeeInactive) errors.push(`Custodian code: "${employee}" is inactive`);
     const serial = get("Serial number");
     if (serial && serials.has(normalize(serial))) errors.push("Serial number already exists or is repeated in this file");
     if (serial) serials.add(normalize(serial));
