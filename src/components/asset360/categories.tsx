@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, LoaderCircle, Pencil, Plus, Search, Trash2, ArrowLeft } from "lucide-react";
+import { Archive, ChevronDown, LoaderCircle, Pencil, Plus, Search, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ export function Categories({ data }: { data: WorkspaceData }) {
   const canManage = canManageCategories(data.role);
   const [search, setSearch] = useState("");
   const [parentFilter, setParentFilter] = useState("all");
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const toggle = (id: string) => setCollapsed((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   const [editing, setEditing] = useState<Category | "new" | null>(null);
   const [deleting, setDeleting] = useState<Category | null>(null);
   const queryClient = useQueryClient();
