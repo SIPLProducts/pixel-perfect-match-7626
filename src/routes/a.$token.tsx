@@ -56,10 +56,10 @@ function PublicAssetPage() {
       <div className="py-7 text-center"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-success/10 text-success"><CheckCircle2 className="size-7"/></div><p className="mt-4 text-xs font-bold uppercase tracking-wider text-success">Registered asset</p><h1 className="mt-2 font-display text-2xl font-bold">{asset.asset_name}</h1><p className="mt-2 font-mono text-sm font-semibold text-primary">{asset.asset_id}</p></div>
       <div className="grid gap-3 border-y border-border py-4 sm:grid-cols-2">
         <Info icon={Building2} label="Organization" value={asset.company || "Registered customer"}/>
-        <Info icon={Factory} label="Plant" value={asset.plant || "—"}/>
+        <Info icon={Factory} label="Plant code" value={asset.plant || "—"}/>
         <Info icon={CircleDollarSign} label="Cost center" value={asset.cost_center || "—"}/>
         <Info icon={Settings2} label="Equipment" value={asset.equipment_model || "—"}/>
-        <Info icon={CalendarDays} label="Capitalization year" value={asset.capitalization_year?.toString() || "—"}/>
+        <Info icon={CalendarDays} label="Acquisition date" value={formatDate(asset.acquisition_date)}/>
       </div>
       {requestId ? <div className="py-8 text-center" role="status"><CheckCircle2 className="mx-auto size-10 text-success"/><h2 className="mt-4 font-display text-xl font-bold">Service request submitted</h2><p className="mt-2 text-sm text-muted-foreground">Your breakdown report and photo have been sent to the asset’s service team.</p><p className="mt-3 break-all font-mono text-xs">Reference: {requestId}</p><Button variant="outline" className="mt-5" onClick={()=>{setRequestId(null);setMode("details");setPhotoPreview(null)}}>Asset details</Button></div> : mode === "breakdown" ? <form onSubmit={onSubmit} className="space-y-5 py-6">
         <Button type="button" variant="ghost" disabled={busy} onClick={()=>setMode("details")}><ArrowLeft className="size-4"/>Asset details</Button>
