@@ -35,12 +35,13 @@ export function Categories({ data }: { data: WorkspaceData }) {
   const parents = data.categories.filter((c) => !c.parent_id);
   const total = (c: Category) => (usage.get(c.id) ?? 0) + data.categories.filter((s) => s.parent_id === c.id).reduce((n, s) => n + (usage.get(s.id) ?? 0), 0);
   const matches = (c: Category) => !term || [c.name, c.prefix, c.description ?? ""].some((v) => v.toLowerCase().includes(term));
+  const filtering = term !== "" || parentFilter !== "all";
   const rows = categoryTree(data.categories).filter(({ row }) => {
     const top = row.parent_id ?? row.id;
     if (parentFilter !== "all" && top !== parentFilter) return false;
     // keep a parent visible when one of its subcategories matches
     return matches(row) || (!row.parent_id && data.categories.some((s) => s.parent_id === row.id && matches(s))) || (!!row.parent_id && matches(data.categories.find((p) => p.id === row.parent_id)!));
-  });
+  }).filter(({ row, depth }) => filtering || !depth || !collapsed.has(row.parent_id ?? ""));
   const deleteMutation = useMutation({
     mutationFn: (id: string) => remove({ data: { categoryId: id } }),
     onSuccess: () => { toast.success("Category deleted"); setDeleting(null); void queryClient.invalidateQueries({ queryKey: ["workspace"] }); },
