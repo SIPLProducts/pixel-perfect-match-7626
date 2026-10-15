@@ -1363,6 +1363,7 @@ export type Database = {
       get_public_asset_details: {
         Args: { _token: string }
         Returns: {
+          acquisition_date: string
           asset_id: string
           asset_name: string
           capitalization_year: number

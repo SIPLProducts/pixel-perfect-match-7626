@@ -162,6 +162,13 @@
       "when": 1791992161758,
       "tag": "0022_block_referenced_employee_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792043404467,
+      "tag": "0023_public_qr_acquisition_date",
+      "breakpoints": true
     }
   ]
 }
