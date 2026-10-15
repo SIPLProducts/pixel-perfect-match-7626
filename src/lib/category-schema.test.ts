@@ -41,5 +41,5 @@ test("tree lists each parent followed by its subcategories", () => {
   assert.deepEqual(categoryTree(tree).map((n) => `${n.depth}:${n.row.id}`), ["0:chr", "0:it", "1:lap", "0:oth"]);
 });
 test("a parent and subcategory cannot share a name", () => {
-  assert.equal(categoryConflict(tree, "laptops", "NEWP"), "name");
+  assert.equal(categoryConflict(tree.map((r) => ({ ...r, prefix: r.id.toUpperCase() })), "laptops", "NEWP"), "name");
 });
