@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, LoaderCircle, Pencil, Plus, Search, Trash2, ArrowLeft } from "lucide-react";
+import { Archive, ChevronDown, LoaderCircle, Pencil, Plus, Search, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ export function Categories({ data }: { data: WorkspaceData }) {
   const canManage = canManageCategories(data.role);
   const [search, setSearch] = useState("");
   const [parentFilter, setParentFilter] = useState("all");
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const toggle = (id: string) => setCollapsed((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   const [editing, setEditing] = useState<Category | "new" | null>(null);
   const [deleting, setDeleting] = useState<Category | null>(null);
   const queryClient = useQueryClient();
@@ -33,12 +35,13 @@ export function Categories({ data }: { data: WorkspaceData }) {
   const parents = data.categories.filter((c) => !c.parent_id);
   const total = (c: Category) => (usage.get(c.id) ?? 0) + data.categories.filter((s) => s.parent_id === c.id).reduce((n, s) => n + (usage.get(s.id) ?? 0), 0);
   const matches = (c: Category) => !term || [c.name, c.prefix, c.description ?? ""].some((v) => v.toLowerCase().includes(term));
+  const filtering = term !== "" || parentFilter !== "all";
   const rows = categoryTree(data.categories).filter(({ row }) => {
     const top = row.parent_id ?? row.id;
     if (parentFilter !== "all" && top !== parentFilter) return false;
     // keep a parent visible when one of its subcategories matches
     return matches(row) || (!row.parent_id && data.categories.some((s) => s.parent_id === row.id && matches(s))) || (!!row.parent_id && matches(data.categories.find((p) => p.id === row.parent_id)!));
-  });
+  }).filter(({ row, depth }) => filtering || !depth || !collapsed.has(row.parent_id ?? ""));
   const deleteMutation = useMutation({
     mutationFn: (id: string) => remove({ data: { categoryId: id } }),
     onSuccess: () => { toast.success("Category deleted"); setDeleting(null); void queryClient.invalidateQueries({ queryKey: ["workspace"] }); },
@@ -56,7 +59,7 @@ export function Categories({ data }: { data: WorkspaceData }) {
     {rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm">
       <thead className="text-[10px] uppercase tracking-wider text-muted-foreground"><tr>{["Name", "Prefix", "Description", "Assets", ""].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
       <tbody>{rows.map(({ row: c, depth }) => { const used = usage.get(c.id) ?? 0; const children = data.categories.filter((s) => s.parent_id === c.id).length; return <tr key={c.id} className={`border-t border-glass-border ${depth ? "" : "bg-glass-strong/40"}`}>
-        <td className={`px-4 py-3 ${depth ? "pl-10 text-foreground" : "font-semibold"}`}>{depth ? "└ " : ""}{c.name}{!depth && children > 0 && <span className="ml-2 text-xs font-normal text-muted-foreground">{children} subcategor{children === 1 ? "y" : "ies"}</span>}</td>
+        <td className={`px-4 py-3 ${depth ? "pl-10 text-foreground" : "font-semibold"}`}>{!depth && children > 0 ? <button type="button" onClick={() => toggle(c.id)} aria-expanded={!collapsed.has(c.id)} aria-label={`${collapsed.has(c.id) ? "Show" : "Hide"} subcategories of ${c.name}`} className="inline-flex items-center gap-1.5 rounded text-left hover:opacity-80 focus-visible:outline focus-visible:outline-1"><ChevronDown className={`size-4 shrink-0 transition-transform ${collapsed.has(c.id) ? "-rotate-90" : ""}`} />{c.name}<span className="text-xs font-normal text-muted-foreground">{children} subcategor{children === 1 ? "y" : "ies"}</span></button> : <>{depth ? "└ " : ""}{c.name}</>}</td>
         <td className="px-4 py-3"><Badge variant="outline">{c.prefix}</Badge></td>
         <td className="max-w-md px-4 py-3 text-muted-foreground">{c.description || "—"}</td>
         <td className="px-4 py-3">{children ? `${total(c)} total` : used}</td>
