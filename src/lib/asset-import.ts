@@ -6,6 +6,7 @@ export const importAssetsSchema = z.object({ rows: z.array(assetSchema).min(1).m
 export const importFields = [
   { key: "name", label: "Asset description / name", type: "text" },
   { key: "categoryId", label: "Category", type: "reference" },
+  { key: "parentCategory", label: "Parent category", type: "text" },
   { key: "serialNumber", label: "Serial number", type: "text" },
   { key: "manufacturer", label: "Manufacturer", type: "text" },
   { key: "model", label: "Equipment / model", type: "text" },
@@ -29,7 +30,7 @@ const headerAliases: Record<string, string> = {
   "acquisition value": "cumulative acquisition value", "book value": "ending book value",
   "installation date": "capitalized on / installation date",
 };
-type Master = { id: string; name: string };
+type Master = { id: string; name: string; parent_id?: string | null };
 export type ImportMasters = { categories: Master[]; locations: Master[]; departments: Master[]; employees: { id: string; employee_code: string; status?: string | null }[]; assets: { serial_number: string | null }[] };
 export type ImportRow = { row: number; name: string; category: string; serial: string; errors: string[]; data?: z.infer<typeof assetSchema> };
 const normalize = (value: string) => value.trim().toLowerCase();
@@ -54,6 +55,15 @@ export function validateImportRows(rows: string[][], masters: ImportMasters): Im
       if (match && match.status && match.status !== "active") { errors.push(`${label}: "${value}" is inactive`); return undefined; }
       return match?.id;
     };
+    const categoryLookup = () => {
+      const id = lookup("Category", masters.categories, true);
+      if (!id) return undefined;
+      if (masters.categories.some(c => c.parent_id === id)) { errors.push(`Category: "${get("Category")}" is a parent category; use one of its subcategories`); return undefined; }
+      const parentName = get("Parent category");
+      const actual = masters.categories.find(c => c.id === masters.categories.find(x => x.id === id)?.parent_id)?.name ?? "";
+      if (parentName && normalize(parentName) !== normalize(actual)) { errors.push(`Parent category: "${parentName}" does not match ${actual ? `"${actual}"` : "a top-level category"}`); return undefined; }
+      return id;
+    };
     const employee = get("Custodian code");
     const employeeMatch = employee ? masters.employees.find(item => normalize(item.employee_code) === normalize(employee)) : undefined;
     const employeeInactive = !!employeeMatch?.status && employeeMatch.status !== "active";
@@ -69,7 +79,7 @@ export function validateImportRows(rows: string[][], masters: ImportMasters): Im
     }));
     const parsed = assetSchema.safeParse({
       ...values,
-      name: get("Asset name"), categoryId: lookup("Category", masters.categories, true),
+      name: get("Asset name"), categoryId: categoryLookup(),
       serialNumber: serial, manufacturer: get("Manufacturer"), model: get("Model"), plant: get("Plant"), companyCode: get("Company code"),
       locationId: lookup("Location", masters.locations), departmentId: lookup("Department", masters.departments), employeeId,
       status: normalize(get("Status") || "active").replaceAll(" ", "_"), condition: normalize(get("Condition") || "good"),
@@ -122,13 +132,15 @@ export async function createAssetTemplateWorkbook(masters: ImportMasters) {
     column.numFmt = field.type === "number" ? "0.######" : field.type === "date" ? "yyyy-mm-dd" : "@";
   });
   const reference = workbook.addWorksheet("Reference");
-  reference.addRow(["Category", "Location", "Department", "Custodian code"]);
-  const length = Math.max(masters.categories.length, masters.locations.length, masters.departments.length, masters.employees.length);
-  for (let i = 0; i < length; i++) reference.addRow([masters.categories[i]?.name ?? "", masters.locations[i]?.name ?? "", masters.departments[i]?.name ?? "", masters.employees[i]?.employee_code ?? ""]);
+  reference.addRow(["Category", "Parent category", "Location", "Department", "Custodian code"]);
+  const assignable = masters.categories.filter(c => !masters.categories.some(x => x.parent_id === c.id));
+  const parentOf = (c?: Master) => masters.categories.find(p => p.id === c?.parent_id)?.name ?? "";
+  const length = Math.max(assignable.length, masters.locations.length, masters.departments.length, masters.employees.length);
+  for (let i = 0; i < length; i++) reference.addRow([assignable[i]?.name ?? "", parentOf(assignable[i]), masters.locations[i]?.name ?? "", masters.departments[i]?.name ?? "", masters.employees[i]?.employee_code ?? ""]);
   reference.columns.forEach(column => { column.width = 30; });
   reference.getRow(1).font = { name: "Arial", bold: true };
   const notes = workbook.addWorksheet("Notes");
-  ["Asset description / name and Category are required. Category, Location and Department must match the Reference sheet.", "Custodian code must match an existing employee code. Blank optional fields remain empty.", "Dates: YYYY-MM-DD or Excel date cells. Amounts: numbers without currency symbols; use the Currency field for the asset currency.", "Asset (ERP number), Sub-number, Depreciation key, Life, and Location (ERP code) are text: preserve leading zeroes and notation such as 000/000.", "ERP Location is separate from the workspace Location. Application asset IDs and QR tokens are generated automatically.", "Warranty certificates, equipment manuals and drawings must be attached from the asset page after import; Excel does not upload document files.", "Status: active, in_stock, assigned, under_maintenance, under_repair, missing, damaged, retired, disposed. Default: active.", "Condition: new, good, average, poor, damaged. Default: good.", "Maximum 500 assets per file, 20 MB. Paste values only; formulas are not accepted.", "New assets only. Existing asset IDs and QR labels are never overwritten. Duplicate serial numbers are rejected."].forEach(note => notes.addRow([note]));
+  ["Asset description / name and Category are required. Category, Location and Department must match the Reference sheet. Use a subcategory, not a parent. Parent category is optional and only checked against the Category.", "Custodian code must match an existing employee code. Blank optional fields remain empty.", "Dates: YYYY-MM-DD or Excel date cells. Amounts: numbers without currency symbols; use the Currency field for the asset currency.", "Asset (ERP number), Sub-number, Depreciation key, Life, and Location (ERP code) are text: preserve leading zeroes and notation such as 000/000.", "ERP Location is separate from the workspace Location. Application asset IDs and QR tokens are generated automatically.", "Warranty certificates, equipment manuals and drawings must be attached from the asset page after import; Excel does not upload document files.", "Status: active, in_stock, assigned, under_maintenance, under_repair, missing, damaged, retired, disposed. Default: active.", "Condition: new, good, average, poor, damaged. Default: good.", "Maximum 500 assets per file, 20 MB. Paste values only; formulas are not accepted.", "New assets only. Existing asset IDs and QR labels are never overwritten. Duplicate serial numbers are rejected."].forEach(note => notes.addRow([note]));
   notes.getColumn(1).width = 120;
   notes.eachRow(row => { row.font = { name: "Arial", size: 11 }; row.alignment = { wrapText: true }; row.height = 32; });
   return workbook;

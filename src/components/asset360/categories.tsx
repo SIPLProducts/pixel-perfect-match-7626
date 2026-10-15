@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { canManageCategories, categoryConflict, categorySchema, normalizePrefix } from "@/lib/category-schema";
+import { canManageCategories, categoryConflict, categorySchema, categoryTree, normalizePrefix, parentBlocker } from "@/lib/category-schema";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createCategory, deleteCategory, updateCategory } from "@/lib/category.functions";
 import type { WorkspaceData } from "./workspace";
 
@@ -18,6 +19,7 @@ type Category = WorkspaceData["categories"][number];
 export function Categories({ data }: { data: WorkspaceData }) {
   const canManage = canManageCategories(data.role);
   const [search, setSearch] = useState("");
+  const [parentFilter, setParentFilter] = useState("all");
   const [editing, setEditing] = useState<Category | "new" | null>(null);
   const [deleting, setDeleting] = useState<Category | null>(null);
   const queryClient = useQueryClient();
@@ -28,7 +30,15 @@ export function Categories({ data }: { data: WorkspaceData }) {
     return map;
   }, [data.assets]);
   const term = search.trim().toLowerCase();
-  const rows = data.categories.filter((c) => !term || [c.name, c.prefix, c.description ?? ""].some((v) => v.toLowerCase().includes(term)));
+  const parents = data.categories.filter((c) => !c.parent_id);
+  const total = (c: Category) => (usage.get(c.id) ?? 0) + data.categories.filter((s) => s.parent_id === c.id).reduce((n, s) => n + (usage.get(s.id) ?? 0), 0);
+  const matches = (c: Category) => !term || [c.name, c.prefix, c.description ?? ""].some((v) => v.toLowerCase().includes(term));
+  const rows = categoryTree(data.categories).filter(({ row }) => {
+    const top = row.parent_id ?? row.id;
+    if (parentFilter !== "all" && top !== parentFilter) return false;
+    // keep a parent visible when one of its subcategories matches
+    return matches(row) || (!row.parent_id && data.categories.some((s) => s.parent_id === row.id && matches(s))) || (!!row.parent_id && matches(data.categories.find((p) => p.id === row.parent_id)!));
+  });
   const deleteMutation = useMutation({
     mutationFn: (id: string) => remove({ data: { categoryId: id } }),
     onSuccess: () => { toast.success("Category deleted"); setDeleting(null); void queryClient.invalidateQueries({ queryKey: ["workspace"] }); },
@@ -40,22 +50,23 @@ export function Categories({ data }: { data: WorkspaceData }) {
   return <div className="overflow-hidden rounded-lg border border-glass-border bg-glass soft-enter">
     <div className="flex flex-col gap-3 border-b border-glass-border p-4 sm:flex-row sm:items-center">
       <div className="relative flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input aria-label="Search categories" className="h-10 bg-glass-strong pl-9" placeholder="Search name, prefix or description…" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+      <Select value={parentFilter} onValueChange={setParentFilter}><SelectTrigger aria-label="Filter by parent category" className="h-10 w-full bg-glass-strong sm:w-64"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All parent categories</SelectItem>{parents.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select>
       {canManage && <Button variant="hero" onClick={() => setEditing("new")}><Plus />Add category</Button>}
     </div>
     {rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm">
       <thead className="text-[10px] uppercase tracking-wider text-muted-foreground"><tr>{["Name", "Prefix", "Description", "Assets", ""].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
-      <tbody>{rows.map((c) => { const used = usage.get(c.id) ?? 0; return <tr key={c.id} className="border-t border-glass-border">
-        <td className="px-4 py-3 font-medium">{c.name}</td>
+      <tbody>{rows.map(({ row: c, depth }) => { const used = usage.get(c.id) ?? 0; const children = data.categories.filter((s) => s.parent_id === c.id).length; return <tr key={c.id} className={`border-t border-glass-border ${depth ? "" : "bg-glass-strong/40"}`}>
+        <td className={`px-4 py-3 ${depth ? "pl-10 text-foreground" : "font-semibold"}`}>{depth ? "└ " : ""}{c.name}{!depth && children > 0 && <span className="ml-2 text-xs font-normal text-muted-foreground">{children} subcategor{children === 1 ? "y" : "ies"}</span>}</td>
         <td className="px-4 py-3"><Badge variant="outline">{c.prefix}</Badge></td>
         <td className="max-w-md px-4 py-3 text-muted-foreground">{c.description || "—"}</td>
-        <td className="px-4 py-3">{used}</td>
+        <td className="px-4 py-3">{children ? `${total(c)} total` : used}</td>
         <td className="px-4 py-3 text-right">{canManage && <div className="flex justify-end gap-1">
           <Button size="sm" variant="ghost" onClick={() => setEditing(c)} aria-label={`Edit ${c.name}`}><Pencil />Edit</Button>
-          <Button size="sm" variant="ghost" disabled={used > 0} title={used ? `Used by ${used} assets` : undefined} onClick={() => setDeleting(c)} aria-label={`Delete ${c.name}`}><Trash2 />{used ? `Used by ${used}` : "Delete"}</Button>
+          <Button size="sm" variant="ghost" disabled={used > 0 || children > 0} title={used ? `Used by ${used} assets` : children ? "Has subcategories" : undefined} onClick={() => setDeleting(c)} aria-label={`Delete ${c.name}`}><Trash2 />{used ? `Used by ${used}` : children ? "Has subcategories" : "Delete"}</Button>
         </div>}</td>
       </tr>; })}</tbody>
     </table></div> : <div className="grid place-items-center gap-2 p-10 text-center text-sm text-muted-foreground"><Archive className="size-6" />{data.categories.length ? "No categories match your search." : "No categories yet."}</div>}
-    <div className="border-t border-glass-border p-4 text-xs text-muted-foreground">Showing {rows.length} of {data.categories.length} categories{canManage ? "" : " · read-only access"}</div>
+    <div className="border-t border-glass-border p-4 text-xs text-muted-foreground">Showing {rows.length} of {data.categories.length} categories ({parents.length} top-level){canManage ? "" : " · read-only access"}</div>
     <AlertDialog open={!!deleting} onOpenChange={(open) => !open && !deleteMutation.isPending && setDeleting(null)}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {deleting?.name}?</AlertDialogTitle><AlertDialogDescription>This category is not used by any asset. Deleting it cannot be undone.</AlertDialogDescription></AlertDialogHeader>
         <AlertDialogFooter><AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel><AlertDialogAction disabled={deleteMutation.isPending} onClick={(e) => { e.preventDefault(); if (deleting) deleteMutation.mutate(deleting.id); }}>{deleteMutation.isPending && <LoaderCircle className="animate-spin" />}Delete</AlertDialogAction></AlertDialogFooter>
@@ -68,27 +79,34 @@ function CategoryForm({ data, category, onClose }: { data: WorkspaceData; catego
   const [name, setName] = useState(category?.name ?? "");
   const [prefix, setPrefix] = useState(category?.prefix ?? "");
   const [description, setDescription] = useState(category?.description ?? "");
+  const [parentId, setParentId] = useState<string>(category?.parent_id ?? "");
+  const used = useMemo(() => new Set(data.assets.map((a) => a.category_id).filter((v): v is string => !!v)), [data.assets]);
+  const hasChildren = !!category && data.categories.some((c) => c.parent_id === category.id);
+  const parentOptions = data.categories.filter((c) => !c.parent_id && c.id !== category?.id && !used.has(c.id));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
   const create = useServerFn(createCategory);
   const update = useServerFn(updateCategory);
   const mutation = useMutation({
-    mutationFn: (values: { name: string; prefix: string; description: string }) => category ? update({ data: { ...values, categoryId: category.id } }) : create({ data: values }),
+    mutationFn: (values: { name: string; prefix: string; description: string; parentId: string | null }) => category ? update({ data: { ...values, categoryId: category.id } }) : create({ data: values }),
     onSuccess: () => { toast.success(category ? "Category updated" : "Category added"); void queryClient.invalidateQueries({ queryKey: ["workspace"] }); onClose(); },
     onError: (error) => toast.error(error.message),
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const parsed = categorySchema.safeParse({ name, prefix, description });
+    const parsed = categorySchema.safeParse({ name, prefix, description, parentId: parentId || null });
     if (!parsed.success) { setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message]))); return; }
     const conflict = categoryConflict(data.categories, parsed.data.name, parsed.data.prefix, category?.id);
     if (conflict) { setErrors({ [conflict]: conflict === "name" ? "A category with this name already exists" : "This prefix is already used by another category" }); return; }
+    const blocker = parentBlocker(data.categories, category?.id, parsed.data.parentId, used);
+    if (blocker) { setErrors({ parentId: blocker }); return; }
     setErrors({});
     mutation.mutate(parsed.data);
   };
   return <form onSubmit={submit} className="glass-panel max-w-2xl space-y-5 rounded-2xl p-6 soft-enter" noValidate>
     <div className="flex items-center justify-between"><h2 className="font-display text-lg font-bold">{category ? "Edit category" : "Add category"}</h2><Button type="button" variant="ghost" onClick={onClose}><ArrowLeft />Back to categories</Button></div>
     <div><Label htmlFor="category-name">Name *</Label><Input id="category-name" className="mt-2 bg-glass-strong" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} aria-invalid={!!errors["name"]} />{errors["name"] && <p className="mt-1 text-xs text-destructive">{errors["name"]}</p>}</div>
+    <div><Label htmlFor="category-parent">Parent category</Label><Select value={parentId || "none"} onValueChange={(v) => setParentId(v === "none" ? "" : v)} disabled={hasChildren}><SelectTrigger id="category-parent" className="mt-2 w-full bg-glass-strong" aria-invalid={!!errors["parentId"]}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">None (top-level category)</SelectItem>{parentOptions.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select>{errors["parentId"] ? <p className="mt-1 text-xs text-destructive">{errors["parentId"]}</p> : <p className="mt-1 text-xs text-muted-foreground">{hasChildren ? "This category has subcategories, so it stays top-level." : "Parents used directly by assets can't be chosen. Assets always use the subcategory."}</p>}</div>
     <div><Label htmlFor="category-prefix">Prefix *</Label><Input id="category-prefix" className="mt-2 bg-glass-strong uppercase" value={prefix} maxLength={6} onChange={(e) => setPrefix(normalizePrefix(e.target.value))} aria-invalid={!!errors["prefix"]} />{errors["prefix"] ? <p className="mt-1 text-xs text-destructive">{errors["prefix"]}</p> : <p className="mt-1 text-xs text-muted-foreground">2–6 letters or digits, used for new asset IDs (e.g. LAP-000001).{category && " Existing asset IDs and QR labels never change."}</p>}</div>
     <div><Label htmlFor="category-description">Description</Label><Textarea id="category-description" className="mt-2 bg-glass-strong" value={description} maxLength={500} onChange={(e) => setDescription(e.target.value)} />{errors["description"] && <p className="mt-1 text-xs text-destructive">{errors["description"]}</p>}</div>
     <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancel</Button><Button variant="hero" disabled={mutation.isPending}>{mutation.isPending && <LoaderCircle className="animate-spin" />}{category ? "Save changes" : "Add category"}</Button></div>

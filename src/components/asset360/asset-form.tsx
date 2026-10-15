@@ -1,3 +1,4 @@
+import { assignableCategories } from "@/lib/category-schema";
 import { selectableEmployees } from "@/lib/employee-schema";
 import { selectableLocations } from "@/lib/location-schema";
 import { useState, useRef, type ReactNode } from "react";
@@ -73,7 +74,7 @@ export function AssetForm({ data, asset, onClose }: { data: WorkspaceData; asset
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-glass-border pb-5"><Button variant="ghost" onClick={close} disabled={mutation.isPending}><ArrowLeft />Back to assets</Button><span className="font-mono text-sm font-semibold text-primary">{asset?.asset_id ?? "New asset"}</span></div>
     <form noValidate onSubmit={event => { event.preventDefault(); mutation.mutate(); }}>
       <fieldset disabled={mutation.isPending}>
-        {section("Asset identification", <>{input("name", "Asset description / name *", "text", 120)}{select("categoryId", "Category *", data.categories)}{input("serialNumber", "Serial number")}{input("manufacturer", "Manufacturer")}{input("model", "Equipment / model")}{input("companyCode", "Company code", "text", 50)}</>)}
+        {section("Asset identification", <>{input("name", "Asset description / name *", "text", 120)}{select("categoryId", "Category *", categoryGroups(data.categories, form.categoryId))}{input("serialNumber", "Serial number")}{input("manufacturer", "Manufacturer")}{input("model", "Equipment / model")}{input("companyCode", "Company code", "text", 50)}</>)}
         {section("Location & ownership", <>{input("plant", "Plant")}{select("locationId", "Location", selectableLocations(data.locations, asset?.location_id), true)}{select("departmentId", "Department", data.departments, true)}{select("employeeId", "Custodian", selectableEmployees(data.employees, asset?.assigned_employee_id).map(x => ({ id: x.id, name: x.full_name })), true)}</>)}
         {section("Value & lifecycle", <>{input("purchaseValue", "Cumulative acquisition value", "number")}{input("currentValue", "Ending book value", "number")}{input("installationDate", "Capitalized on / installation date", "date")}{input("warrantyEnd", "Warranty end", "date")}{select("status", "Status", assetSchema.shape.status.options.map(id => ({ id, name: id.replaceAll("_", " ") })))}{select("condition", "Condition", assetSchema.shape.condition.options.map(id => ({ id, name: id })))}</>)}
         {["ERP identification", "Depreciation & life", "Financial movements", "Additional references"].map(title => <div key={title}>{section(title, assetErpFields.filter(field => field.section === title).map(field => input(field.key, field.label, field.type)))}</div>)}
@@ -85,4 +86,14 @@ export function AssetForm({ data, asset, onClose }: { data: WorkspaceData; asset
       <div className="flex flex-wrap justify-end gap-3 border-t border-glass-border py-5"><Button type="button" variant="outline" onClick={close} disabled={mutation.isPending}>Cancel</Button><Button type="submit" variant="hero" disabled={mutation.isPending}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />}{asset ? "Save changes" : "Register asset"}</Button></div>
     </form>
   </div>;
+}
+
+/** Assignable categories labelled "Parent › Subcategory", sorted so each parent's group stays together. */
+function categoryGroups(categories: { id: string; name: string; parent_id?: string | null }[], keepId?: string) {
+  const allowed = assignableCategories(categories);
+  const kept = categories.find((c) => c.id === keepId && !allowed.includes(c));
+  return [...allowed, ...(kept ? [kept] : [])].map((c) => {
+    const parent = categories.find((p) => p.id === c.parent_id)?.name;
+    return { id: c.id, name: parent ? `${parent} › ${c.name}` : c.name };
+  }).sort((a, b) => a.name.localeCompare(b.name));
 }
