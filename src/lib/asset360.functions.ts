@@ -1,3 +1,4 @@
+import { parentCategoryName } from "@/lib/category-schema";
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -96,7 +97,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),
       context.supabase.from("profiles").select("full_name,job_title,avatar_url").eq("id", context.userId).maybeSingle(),
       readAllRows((from, to) => context.supabase.from("assets").select("id,asset_id,name,category_id,remarks,manufacturer,model,serial_number,plant,company_code,status,condition,location_id,department_id,assigned_employee_id,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,external_asset_number,asset_subnumber,depreciation_key,depreciation_start_date,cost_center,planned_life,erp_location,special_depreciation,supplier,accumulated_depreciation,quantity,wbs_element,starting_book_value,base_unit,currency,write_ups,transaction_acquisition_value,transferred_accumulated_depreciation,planned_depreciation,erp_reference_1,erp_reference_2,erp_reference_3,erp_reference_4,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
-      readAllRows((from, to) => context.supabase.from("asset_categories").select("id,name,prefix,description").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
+      readAllRows((from, to) => context.supabase.from("asset_categories").select("id,name,prefix,description,parent_id").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
       readAllRows((from, to) => context.supabase.from("locations").select("id,name,type,code,parent_id,status").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
       readAllRows((from, to) => context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
     ]);
@@ -129,7 +130,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       }));
       serviceRequests.push(...batch);
     }
-    return { needsOnboarding: false as const, cars: cars.data ?? [], carMessages: carMessages.data ?? [], organization: organization.data, profile: profile.data, role: membership.role, workspaceUsers: printUsers.data ?? [], qrPrintHistory: printHistory, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0 })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
+    return { needsOnboarding: false as const, cars: cars.data ?? [], carMessages: carMessages.data ?? [], organization: organization.data, profile: profile.data, role: membership.role, workspaceUsers: printUsers.data ?? [], qrPrintHistory: printHistory, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0, parent_category_name: parentCategoryName(categories.data ?? [], asset.category_id) })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
   });
 
 export const recordQrPrints = createServerFn({ method: "POST" })

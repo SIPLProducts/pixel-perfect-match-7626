@@ -26,7 +26,7 @@ test("bulk import server validation rejects oversized batches", () => {
   assert.equal(importAssetsSchema.safeParse({ rows: Array.from({ length: 501 }, () => row) }).success, false);
 });
 test("Excel mapping covers every editable asset field and preserves ERP values", () => {
-  assert.deepEqual(importFields.map(field => field.key).sort(), Object.keys(assetSchema.shape).sort());
+  assert.deepEqual(importFields.map(field => field.key).filter(key => key !== "parentCategory").sort(), Object.keys(assetSchema.shape).sort());
   const values: Record<string, string> = {
     name: "ERP equipment", categoryId: "Laptops", externalAssetNumber: "000100016", assetSubnumber: "0000",
     depreciationKey: "0000", plannedLife: "000/000", erpLocation: "0012", depreciationStartDate: "1989-06-30",
@@ -47,8 +47,8 @@ test("Excel mapping covers every editable asset field and preserves ERP values",
   assert.equal(stored.depreciation_start_date, "1989-06-30");
   assert.equal(stored.quantity, 10.07);
   assert.equal(stored.special_depreciation, -12.5);
-  for (const field of importFields.filter(field => values[field.key] && field.key !== "categoryId")) {
-    assert.equal(row.data[field.key], field.type === "number" ? Number(values[field.key]) : values[field.key]);
+  for (const field of importFields.filter(field => values[field.key] && field.key !== "categoryId" && field.key !== "parentCategory")) {
+    assert.equal(row.data[field.key as keyof typeof row.data], field.type === "number" ? Number(values[field.key]) : values[field.key]);
   }
 });
 test("expanded Excel template round trips with text codes and full-width filters", async () => {
@@ -71,4 +71,12 @@ test("Excel upload rejects duplicated old and new headings and invalid ERP value
   const result = validateImportRows([["Asset description / name","Category","Quantity","Depreciation calculation start date"],["Equipment","Laptops","invalid","2026-99-99"]],masters);
   assert.equal(result[0]?.data,undefined);
   assert.equal(result[0]?.errors.length,2);
+});
+test("import rejects parent categories and checks the optional parent column", () => {
+  const masters = { categories: [{ id: "00000000-0000-4000-8000-000000000001", name: "IT & Computer Equipment", parent_id: null }, { id: "00000000-0000-4000-8000-000000000002", name: "Laptops", parent_id: "00000000-0000-4000-8000-000000000001" }], locations: [], departments: [], employees: [], assets: [] };
+  const run = (category: string, parent?: string) => validateImportRows([["Asset description / name", "Category", ...(parent === undefined ? [] : ["Parent category"])], ["Dell laptop", category, ...(parent === undefined ? [] : [parent])]], masters)[0]!;
+  assert.equal(run("Laptops").errors.length, 0);
+  assert.equal(run("Laptops", "IT & Computer Equipment").errors.length, 0);
+  assert.match(run("IT & Computer Equipment").errors.join(), /parent category/);
+  assert.match(run("Laptops", "Vehicles & Transport").errors.join(), /does not match/);
 });

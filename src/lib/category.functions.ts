@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { canManageCategories, categoryConflict, categorySchema, deleteCategorySchema, updateCategorySchema } from "@/lib/category-schema";
+import { canManageCategories, categoryConflict, parentBlocker, categorySchema, deleteCategorySchema, updateCategorySchema } from "@/lib/category-schema";
 
 async function managerOrg(supabase: SupabaseClient<Database>, userId: string) {
   const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).limit(1).maybeSingle();
@@ -11,17 +11,23 @@ async function managerOrg(supabase: SupabaseClient<Database>, userId: string) {
   return data.organization_id;
 }
 
-async function assertUnique(supabase: SupabaseClient<Database>, organizationId: string, name: string, prefix: string, ignoreId?: string) {
-  const { data, error } = await supabase.from("asset_categories").select("id,name,prefix").eq("organization_id", organizationId);
+async function assertValid(supabase: SupabaseClient<Database>, organizationId: string, name: string, prefix: string, parentId: string | null, ignoreId?: string) {
+  const { data, error } = await supabase.from("asset_categories").select("id,name,prefix,parent_id").eq("organization_id", organizationId);
   if (error) throw new Error("Categories could not be checked. Please retry.");
   const conflict = categoryConflict(data ?? [], name, prefix, ignoreId);
   if (conflict === "name") throw new Error("A category with this name already exists");
   if (conflict === "prefix") throw new Error("This prefix is already used by another category");
+  if (parentId) {
+    const { count } = await supabase.from("assets").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("category_id", parentId);
+    const blocker = parentBlocker(data ?? [], ignoreId, parentId, new Set(count ? [parentId] : []));
+    if (blocker) throw new Error(blocker);
+  }
 }
 
 function friendly(error: { code?: string; message: string }): Error {
   if (error.code === "23505") return new Error(error.message.includes("prefix") ? "This prefix is already used by another category" : "A category with this name already exists");
-  if (error.code === "23503") return new Error("This category is used by assets and cannot be deleted");
+  if (error.code === "23503") return new Error(error.message.includes("subcategories") ? "Move or delete its subcategories first" : "This category is used by assets and cannot be deleted");
+  if (error.code === "23514") return new Error(error.message);
   return new Error("Category could not be saved. Please retry.");
 }
 
@@ -30,9 +36,9 @@ export const createCategory = createServerFn({ method: "POST" })
   .inputValidator((input) => categorySchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
-    await assertUnique(context.supabase, organizationId, data.name, data.prefix);
+    await assertValid(context.supabase, organizationId, data.name, data.prefix, data.parentId);
     const { data: row, error } = await context.supabase.from("asset_categories")
-      .insert({ organization_id: organizationId, name: data.name, prefix: data.prefix, description: data.description || null })
+      .insert({ organization_id: organizationId, name: data.name, prefix: data.prefix, description: data.description || null, parent_id: data.parentId })
       .select("id,name").single();
     if (error || !row) throw friendly(error ?? { message: "" });
     return row;
@@ -43,9 +49,9 @@ export const updateCategory = createServerFn({ method: "POST" })
   .inputValidator((input) => updateCategorySchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
-    await assertUnique(context.supabase, organizationId, data.name, data.prefix, data.categoryId);
+    await assertValid(context.supabase, organizationId, data.name, data.prefix, data.parentId, data.categoryId);
     const { data: row, error } = await context.supabase.from("asset_categories")
-      .update({ name: data.name, prefix: data.prefix, description: data.description || null })
+      .update({ name: data.name, prefix: data.prefix, description: data.description || null, parent_id: data.parentId })
       .eq("id", data.categoryId).eq("organization_id", organizationId).select("id,name").maybeSingle();
     if (error) throw friendly(error);
     if (!row) throw new Error("Category not found in this workspace");

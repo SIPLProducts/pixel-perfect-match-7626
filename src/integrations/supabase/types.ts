@@ -156,6 +156,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string
+          parent_id: string | null
           prefix: string
           updated_at: string
         }
@@ -165,6 +166,7 @@ export type Database = {
           id?: string
           name: string
           organization_id: string
+          parent_id?: string | null
           prefix: string
           updated_at?: string
         }
@@ -174,6 +176,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string
+          parent_id?: string | null
           prefix?: string
           updated_at?: string
         }
@@ -183,6 +186,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -835,6 +845,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      category_hierarchy_snapshot: {
+        Row: {
+          asset_id: string | null
+          asset_row_id: string | null
+          category_id: string | null
+          organization_id: string | null
+          qr_token: string | null
+          taken_at: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          asset_row_id?: string | null
+          category_id?: string | null
+          organization_id?: string | null
+          qr_token?: string | null
+          taken_at?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          asset_row_id?: string | null
+          category_id?: string | null
+          organization_id?: string | null
+          qr_token?: string | null
+          taken_at?: string | null
+        }
+        Relationships: []
       }
       departments: {
         Row: {
