@@ -1,5 +1,21 @@
 # Parent categories and subcategories
 
+## Pre-implementation checks (verified against live data)
+```text
+Workspace (5, all named "Sharvi Infotech Demo")  Categories  Assets  No category  Active QR
+Workspace 1..5 (each)                              9          54       0           54
+Total                                              45         270      0           270
+```
+- Each of the 9 categories is used by exactly 6 assets in every workspace.
+- Proposed parent prefixes FURN, ITEQ, ELEC, VTRN, PLNT, OTHR each match the current rule (2-6 uppercase letters/digits). None of them clashes with an existing prefix in any workspace (0 clashes).
+- None of the 6 parent names clashes with an existing name in any workspace (0 clashes).
+
+## Guarantees and how they are checked
+- **Parents can't be assigned to assets.** The asset form and Excel import only offer or accept categories with no subcategories. The server rejects a parent category on asset save. A database check blocks any asset insert or update that points at a category with subcategories. This covers forms, import and any direct write. Tested directly by trying to save an asset on a parent, which must be rejected.
+- **Asset IDs and QR tokens unchanged.** Before the change, a snapshot of all 270 (asset id, asset ID, category, QR token) rows is saved to a private backup table. After the change, it is compared row by row and must show 0 differences. No step updates the assets or QR tables.
+- **Existing Excel imports keep working.** Category is still matched by name. The new Parent column is optional. Tests re-run the current template, the legacy headings and a file without the Parent column, and all must import as before. A file whose Category names a parent is rejected with a clear message.
+
+
 ## Current state (checked)
 - Categories are a flat list per workspace: Name, Prefix, Description. Unique name and unique prefix per workspace; prefix must be 2-6 letters/digits.
 - Every workspace (5 today) has the same 9 categories, each used by 6 assets (270 assets total). None are parents yet.
