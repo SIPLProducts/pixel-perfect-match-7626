@@ -74,5 +74,10 @@ function PublicAssetPage() {
     <Dialog open={choiceOpen} onOpenChange={setChoiceOpen}><DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Asset digital profile</DialogTitle><DialogDescription>{asset.asset_name} · {asset.asset_id}</DialogDescription></DialogHeader><div className="grid gap-3 pt-2"><Button size="lg" variant="outline" onClick={()=>{setMode("details");setChoiceOpen(false)}}><FileText className="size-5"/>View asset details</Button><Button size="lg" onClick={()=>{setMode("breakdown");setError("");setChoiceOpen(false)}}><Wrench className="size-5"/>Log service / breakdown</Button></div></DialogContent></Dialog>
   </main>;
 }
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
 function Info({ icon: Icon, label, value }: { icon: typeof Building2; label: string; value: string }) { return <div className="flex min-w-0 items-center gap-3 py-2"><Icon className="size-4 shrink-0 text-primary"/><div className="min-w-0"><p className="text-[10px] uppercase text-muted-foreground">{label}</p><p className="mt-0.5 break-words text-sm font-semibold">{value}</p></div></div>; }
 function PublicAssetError(){return <main className="app-backdrop grid min-h-screen place-items-center px-4"><section className="glass-panel max-w-md rounded-2xl p-8 text-center"><ShieldCheck className="mx-auto size-10 text-destructive"/><h1 className="mt-4 font-display text-xl font-bold">Asset label not recognized</h1><p className="mt-2 text-sm text-muted-foreground">This QR code is invalid, inactive, or no longer available.</p><Button asChild className="mt-6"><Link to="/auth">Open Asset360</Link></Button></section></main>}
