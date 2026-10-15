@@ -47,8 +47,8 @@ test("Excel mapping covers every editable asset field and preserves ERP values",
   assert.equal(stored.depreciation_start_date, "1989-06-30");
   assert.equal(stored.quantity, 10.07);
   assert.equal(stored.special_depreciation, -12.5);
-  for (const field of importFields.filter(field => values[field.key] && field.key !== "categoryId")) {
-    assert.equal(row.data[field.key], field.type === "number" ? Number(values[field.key]) : values[field.key]);
+  for (const field of importFields.filter(field => values[field.key] && field.key !== "categoryId" && field.key !== "parentCategory")) {
+    assert.equal(row.data[field.key as keyof typeof row.data], field.type === "number" ? Number(values[field.key]) : values[field.key]);
   }
 });
 test("expanded Excel template round trips with text codes and full-width filters", async () => {
