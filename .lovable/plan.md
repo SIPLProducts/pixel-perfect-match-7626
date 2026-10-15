@@ -1,5 +1,21 @@
 # Parent categories and subcategories
 
+## Pre-implementation checks (verified against live data)
+```text
+Workspace (5, all named "Sharvi Infotech Demo")  Categories  Assets  No category  Active QR
+Workspace 1..5 (each)                              9          54       0           54
+Total                                              45         270      0           270
+```
+- Each of the 9 categories is used by exactly 6 assets in every workspace.
+- Proposed parent prefixes FURN, ITEQ, ELEC, VTRN, PLNT, OTHR each match the current rule (2-6 uppercase letters/digits). None of them clashes with an existing prefix in any workspace (0 clashes).
+- None of the 6 parent names clashes with an existing name in any workspace (0 clashes).
+
+## Guarantees and how they are checked
+- **Parents can't be assigned to assets.** The asset form and Excel import only offer or accept categories with no subcategories. The server rejects a parent category on asset save. A database check blocks any asset insert or update that points at a category with subcategories. This covers forms, import and any direct write. Tested directly by trying to save an asset on a parent, which must be rejected.
+- **Asset IDs and QR tokens unchanged.** Before the change, a snapshot of all 270 (asset id, asset ID, category, QR token) rows is saved to a private backup table. After the change, it is compared row by row and must show 0 differences. No step updates the assets or QR tables.
+- **Existing Excel imports keep working.** Category is still matched by name. The new Parent column is optional. Tests re-run the current template, the legacy headings and a file without the Parent column, and all must import as before. A file whose Category names a parent is rejected with a clear message.
+
+
 ## Current state (checked)
 - Categories are a flat list per workspace: Name, Prefix, Description. Unique name and unique prefix per workspace; prefix must be 2-6 letters/digits.
 - Every workspace (5 today) has the same 9 categories, each used by 6 assets (270 assets total). None are parents yet.
@@ -55,3 +71,22 @@ Impact: no columns removed or renamed. No change to the assets, QR, transfer, se
 - `dashboard-export.ts`: add a parent column.
 - Not touched: QR generation/labels, public scan page, asset ID generation, transfers, service requests, QRmyCAR, ERP/SAP fields.
 - Verification: unit tests, typecheck, and direct database tests (a loop, 3 levels, a cross-workspace parent and deleting a parent with children are all rejected). Signed-in browser run: categories tree, add a subcategory, create an asset, filter by parent, import an Excel file with and without the parent column. Confirm asset IDs and QR tokens are unchanged by comparing before and after.
+
+## Rollback plan
+Database (in reverse order, no data loss):
+1. Clear the parent link on all categories. Assets are never touched, so this alone gives back the flat list.
+2. Remove the 6 added parent categories. This is safe because no asset can reference a parent, and the delete safeguard confirms it.
+3. Remove the new validation and asset checks, and restore the original delete safeguard.
+4. The parent column can then stay in place, unused and marked as retired (dropping it isn't needed and would be blocked anyway).
+5. Use the backup snapshot to confirm the asset IDs, categories and QR tokens still match.
+
+Application:
+- Every screen falls back to the flat view when no category has a parent, so the app still works even mid-rollback.
+- To roll back the code, restore the project to the version before this change from the project history. No published QR labels depend on it.
+
+## Order of work
+1. Snapshot backup, then the database change (add the column, validation, safeguards).
+2. Seed the parents and map the subcategories.
+3. Compare against the snapshot (must be 0 differences).
+4. App changes and tests.
+5. Signed-in browser checks.
