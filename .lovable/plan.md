@@ -71,3 +71,22 @@ Impact: no columns removed or renamed. No change to the assets, QR, transfer, se
 - `dashboard-export.ts`: add a parent column.
 - Not touched: QR generation/labels, public scan page, asset ID generation, transfers, service requests, QRmyCAR, ERP/SAP fields.
 - Verification: unit tests, typecheck, and direct database tests (a loop, 3 levels, a cross-workspace parent and deleting a parent with children are all rejected). Signed-in browser run: categories tree, add a subcategory, create an asset, filter by parent, import an Excel file with and without the parent column. Confirm asset IDs and QR tokens are unchanged by comparing before and after.
+
+## Rollback plan
+Database (in reverse order, no data loss):
+1. Clear the parent link on all categories. Assets are never touched, so this alone gives back the flat list.
+2. Remove the 6 added parent categories. This is safe because no asset can reference a parent, and the delete safeguard confirms it.
+3. Remove the new validation and asset checks, and restore the original delete safeguard.
+4. The parent column can then stay in place, unused and marked as retired (dropping it isn't needed and would be blocked anyway).
+5. Use the backup snapshot to confirm the asset IDs, categories and QR tokens still match.
+
+Application:
+- Every screen falls back to the flat view when no category has a parent, so the app still works even mid-rollback.
+- To roll back the code, restore the project to the version before this change from the project history. No published QR labels depend on it.
+
+## Order of work
+1. Snapshot backup, then the database change (add the column, validation, safeguards).
+2. Seed the parents and map the subcategories.
+3. Compare against the snapshot (must be 0 differences).
+4. App changes and tests.
+5. Signed-in browser checks.
