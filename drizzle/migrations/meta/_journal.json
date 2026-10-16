@@ -176,6 +176,13 @@
       "when": 1792062056014,
       "tag": "0024_category_hierarchy",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792162403199,
+      "tag": "0025_category_excel_templates",
+      "breakpoints": true
     }
   ]
 }
