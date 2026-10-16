@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { canManageCategories, categoryConflict, parentBlocker, categorySchema, deleteCategorySchema, updateCategorySchema } from "@/lib/category-schema";
+import { setCategoryTemplateSchema } from "@/lib/asset-templates";
 
 async function managerOrg(supabase: SupabaseClient<Database>, userId: string) {
   const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).limit(1).maybeSingle();
@@ -73,4 +74,19 @@ export const deleteCategory = createServerFn({ method: "POST" })
     if (error) throw friendly(error);
     if (!rows?.length) throw new Error("Category not found in this workspace");
     return { id: data.categoryId };
+  });
+
+export const setCategoryTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => setCategoryTemplateSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const organizationId = await managerOrg(context.supabase, context.userId);
+    const { data: cat } = await context.supabase.from("asset_categories").select("id").eq("id", data.categoryId).eq("organization_id", organizationId).maybeSingle();
+    if (!cat) throw new Error("Category not found in this workspace");
+    const table = context.supabase.from("category_templates");
+    const { error } = data.templateKey
+      ? await table.upsert({ category_id: data.categoryId, organization_id: organizationId, template_key: data.templateKey, updated_by: context.userId, updated_at: new Date().toISOString() })
+      : await table.delete().eq("category_id", data.categoryId).eq("organization_id", organizationId);
+    if (error) throw new Error("Excel template setting could not be saved. Please retry.");
+    return { categoryId: data.categoryId, templateKey: data.templateKey };
   });

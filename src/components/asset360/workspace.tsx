@@ -22,7 +22,7 @@ import { latestAssetTransfers } from "@/lib/asset-transfer-summary";
 import { LabelDialog } from "@/components/asset360/label-dialog";
 import { bootstrapWorkspace, getWorkspaceData } from "@/lib/asset360.functions";
 import { exportDashboardCsv, exportDashboardPdf, type DashboardReport } from "@/lib/dashboard-export";
-import { downloadAssetTemplate } from "@/lib/asset-import";
+import { TemplateDownload } from "@/components/asset360/template-download";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,10 +160,8 @@ function ReportCard({title,description,icon:Icon,onClick}:{title:string;descript
 function SettingsPage({data}:{data:WorkspaceData}){return <div className="grid gap-5 xl:grid-cols-2"><div className="glass-panel rounded-2xl p-6"><h2 className="font-display font-bold">Organization</h2><div className="mt-5 space-y-4"><div><Label>Organization name</Label><Input className="mt-2 bg-white/55" value={data.organization?.name??""} readOnly/></div><div><Label>Deployment mode</Label><Input className="mt-2 bg-white/55 capitalize" value={data.organization?.mode??"standalone"} readOnly/></div></div></div><div className="glass-panel rounded-2xl p-6"><h2 className="font-display font-bold">ERP integration</h2><p className="mt-2 text-sm text-muted-foreground">SAP and ERP credentials stay server-side. This demo workspace runs independently.</p><div className="mt-5 flex items-center gap-3 rounded-xl bg-success/10 p-4 text-sm text-success"><ShieldCheck/>Secrets protected by server boundary</div><Button className="mt-5" variant="glass" onClick={()=>toast.info("ERP setup requires an administrator and server-side credentials")}>Configure integration</Button></div></div>}
 
 function PageActions({active,setAssetDialog,assets,onImport,data}:{active:string;setAssetDialog:(v:boolean)=>void;assets:Asset[];onImport:()=>void;data:WorkspaceData}){
-  const [downloading,setDownloading]=useState(false);
-  const downloadTemplate=async()=>{setDownloading(true);try{await downloadAssetTemplate(data);}catch{toast.error("Could not download the Excel template. Please try again.");}finally{setDownloading(false);}};
   const exportAssets=()=>{const escape=(value:unknown)=>`"${String(value??"").replaceAll('"','""')}"`;const headings=["Asset ID","Name","Serial Number","Plant","Company Code","Status","Acquisition Value","Book Value"];const rows=assets.map(a=>[a.asset_id,a.name,a.serial_number,a.plant,a.company_code,a.status,a.purchase_value,a.current_value]);const blob=new Blob([[headings,...rows].map(row=>row.map(escape).join(",")).join("\n")],{type:"text/csv;charset=utf-8"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="asset360-assets.csv";link.click();URL.revokeObjectURL(link.href);};
-  if(active==="assets") return <div className="flex flex-wrap gap-2"><Button variant="glass" onClick={exportAssets}><Download/>Export</Button><Button variant="outline" onClick={downloadTemplate} disabled={downloading}>{downloading?<LoaderCircle className="animate-spin"/>:<FileSpreadsheet/>}Download Excel template</Button><Button variant="outline" onClick={onImport}><Upload/>Upload Excel</Button><Button variant="hero" onClick={()=>setAssetDialog(true)}><PackagePlus/>Add asset</Button></div>;
+  if(active==="assets") return <div className="flex flex-wrap gap-2"><Button variant="glass" onClick={exportAssets}><Download/>Export</Button><TemplateDownload data={data}/><Button variant="outline" onClick={onImport}><Upload/>Upload Excel</Button><Button variant="hero" onClick={()=>setAssetDialog(true)}><PackagePlus/>Add asset</Button></div>;
   if(active==="dashboard") return <Button variant="hero" onClick={()=>setAssetDialog(true)}><PackagePlus/>Add asset</Button>;
   if(active==="transfers"||active==="categories"||active==="locations"||active==="employees") return null;
   return <Button variant="glass" onClick={()=>toast.info(`${pageCopy[active]?.[0]??"This area"} is ready for organization records`)}><Download/>Export view</Button>;

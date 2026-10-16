@@ -11,7 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { canManageCategories, categoryConflict, categorySchema, categoryTree, normalizePrefix, parentBlocker } from "@/lib/category-schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createCategory, deleteCategory, updateCategory } from "@/lib/category.functions";
+import { createCategory, deleteCategory, setCategoryTemplate, updateCategory } from "@/lib/category.functions";
+import { assetTemplates, resolveTemplate } from "@/lib/asset-templates";
+import { useCategoryTemplates } from "./template-download";
 import type { WorkspaceData } from "./workspace";
 
 type Category = WorkspaceData["categories"][number];
@@ -87,11 +89,21 @@ function CategoryForm({ data, category, onClose }: { data: WorkspaceData; catego
   const hasChildren = !!category && data.categories.some((c) => c.parent_id === category.id);
   const parentOptions = data.categories.filter((c) => !c.parent_id && c.id !== category?.id && !used.has(c.id));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const links = useCategoryTemplates();
+  const ownLink = category ? links.data?.find((l) => l.category_id === category.id)?.template_key ?? "" : "";
+  const [templateKey, setTemplateKey] = useState<string | null>(null);
+  const templateValue = templateKey ?? ownLink;
+  const inherited = parentId ? resolveTemplate(parentId, data.categories, links.data ?? []) : null;
+  const saveTemplate = useServerFn(setCategoryTemplate);
   const queryClient = useQueryClient();
   const create = useServerFn(createCategory);
   const update = useServerFn(updateCategory);
   const mutation = useMutation({
-    mutationFn: (values: { name: string; prefix: string; description: string; parentId: string | null }) => category ? update({ data: { ...values, categoryId: category.id } }) : create({ data: values }),
+    mutationFn: async (values: { name: string; prefix: string; description: string; parentId: string | null }) => {
+      const row = category ? await update({ data: { ...values, categoryId: category.id } }) : await create({ data: values });
+      if (templateKey !== null && templateKey !== ownLink) await saveTemplate({ data: { categoryId: row.id, templateKey: (templateKey || null) as "it_computer" | "plant_machinery" | null } });
+      return row;
+    },
     onSuccess: () => { toast.success(category ? "Category updated" : "Category added"); void queryClient.invalidateQueries({ queryKey: ["workspace"] }); onClose(); },
     onError: (error) => toast.error(error.message),
   });
@@ -111,6 +123,7 @@ function CategoryForm({ data, category, onClose }: { data: WorkspaceData; catego
     <div><Label htmlFor="category-name">Name *</Label><Input id="category-name" className="mt-2 bg-glass-strong" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} aria-invalid={!!errors["name"]} />{errors["name"] && <p className="mt-1 text-xs text-destructive">{errors["name"]}</p>}</div>
     <div><Label htmlFor="category-parent">Parent category</Label><Select value={parentId || "none"} onValueChange={(v) => setParentId(v === "none" ? "" : v)} disabled={hasChildren}><SelectTrigger id="category-parent" className="mt-2 w-full bg-glass-strong" aria-invalid={!!errors["parentId"]}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">None (top-level category)</SelectItem>{parentOptions.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select>{errors["parentId"] ? <p className="mt-1 text-xs text-destructive">{errors["parentId"]}</p> : <p className="mt-1 text-xs text-muted-foreground">{hasChildren ? "This category has subcategories, so it stays top-level." : "Parents used directly by assets can't be chosen. Assets always use the subcategory."}</p>}</div>
     <div><Label htmlFor="category-prefix">Prefix *</Label><Input id="category-prefix" className="mt-2 bg-glass-strong uppercase" value={prefix} maxLength={6} onChange={(e) => setPrefix(normalizePrefix(e.target.value))} aria-invalid={!!errors["prefix"]} />{errors["prefix"] ? <p className="mt-1 text-xs text-destructive">{errors["prefix"]}</p> : <p className="mt-1 text-xs text-muted-foreground">2–6 letters or digits, used for new asset IDs (e.g. LAP-000001).{category && " Existing asset IDs and QR labels never change."}</p>}</div>
+    <div><Label htmlFor="category-template">Excel template</Label><Select value={templateValue || "none"} onValueChange={(v) => setTemplateKey(v === "none" ? "" : v)}><SelectTrigger id="category-template" className="mt-2 w-full bg-glass-strong"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{inherited ? `Same as parent (${inherited.label})` : "None"}</SelectItem>{assetTemplates.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Format offered when downloading the Excel template for this category. Subcategories without their own choice use the parent's.</p></div>
     <div><Label htmlFor="category-description">Description</Label><Textarea id="category-description" className="mt-2 bg-glass-strong" value={description} maxLength={500} onChange={(e) => setDescription(e.target.value)} />{errors["description"] && <p className="mt-1 text-xs text-destructive">{errors["description"]}</p>}</div>
     <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancel</Button><Button variant="hero" disabled={mutation.isPending}>{mutation.isPending && <LoaderCircle className="animate-spin" />}{category ? "Save changes" : "Add category"}</Button></div>
   </form>;
