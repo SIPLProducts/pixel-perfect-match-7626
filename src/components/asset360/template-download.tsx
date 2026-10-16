@@ -31,7 +31,7 @@ export function TemplateDownload({ data, variant = "outline", label = "Download 
   const [busy, setBusy] = useState(false);
   const links = useCategoryTemplates();
   const categories = data.categories.filter((c) => !data.categories.some((x) => x.parent_id === c.id))
-    .map((c) => ({ ...c, path: categoryPath(c, data.categories) })).sort((a, b) => a.path.localeCompare(b.path));
+    .map((c) => ({ ...c, path: categoryPath(data.categories.find((p) => p.id === c.parent_id)?.name, c.name) })).sort((a, b) => a.path.localeCompare(b.path));
   const selected = data.categories.find((c) => c.id === choice);
   const template = selected ? resolveTemplate(selected.id, data.categories, links.data ?? []) : null;
   const download = async () => {
