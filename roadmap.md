@@ -74,3 +74,6 @@
 
 - [x] Locations module: add, edit, deactivate, hierarchy checks, delete safeguard, inactive locations hidden from new choices
 - [x] Employees module: add, edit, search, deactivate/reactivate, duplicate codes, manager loops, delete safeguard, inactive employees hidden from new choices
+
+- [x] User Management: invite, edit roles, deactivate/reactivate, Client Tester role, invite-only sign-in
+- [ ] Confirm a real invitation email arrives and its link sets a password — needs a real inbox
