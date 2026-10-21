@@ -89,7 +89,8 @@ A new **Users & Access** page under the sidebar's Control group, visible to Supe
 
 The membership checks and listing function already meet the requirements, so they aren't changed. Nothing is dropped or renamed, and no asset, category, QR, transfer or SAP data changes. To undo, restore that one rule.
 
-## 5. Code changes
+## 6. Code changes
+- `src/routes/reset-password.tsx`: also accept invitation links ("Set your password").
 - `src/lib/user-management.ts` (new): invite/edit form checks, the role catalogue (descriptions, summaries) and the permission matrix, taken from the same manager-role lists the server uses, plus the rules for which roles each admin may assign, self-change and last Super admin.
 - `src/lib/user-management.functions.ts` (new): authenticated `listUsers`, `inviteUser`, `updateUser`, `setUserActive`.
   - Each checks the caller's active role first.
@@ -102,7 +103,7 @@ The membership checks and listing function already meet the requirements, so the
 
 Not touched: asset forms (With/Without SAP), QR, Categories/Locations/Employees, Transfers, Service requests, Reports, Excel, SAP placeholders.
 
-## 6. Tests
+## 7. Tests
 - **Automated:**
   - Which roles each admin may assign; Admin cannot assign Admin or Super admin.
   - Self-change refused; last Super admin protected.
