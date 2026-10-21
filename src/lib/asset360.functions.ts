@@ -16,24 +16,17 @@ import { transferSchema, editTransferSchema } from "@/lib/transfer-schema";
 const transferRoles = new Set(["super_admin", "admin", "asset_manager", "facility_manager", "it_manager"]);
 
 async function getMembership(supabase: SupabaseClient<Database>, userId: string) {
-  const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).eq("active", true).limit(1).maybeSingle();
+  const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).limit(1).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
 
-/** Any membership, active or not: an inactive member must never get a fresh workspace. */
-async function hasAnyMembership(supabase: SupabaseClient<Database>, userId: string) {
-  const { data, error } = await supabase.from("user_roles").select("id").eq("user_id", userId).limit(1).maybeSingle();
-  if (error) throw new Error(error.message);
-  return Boolean(data);
-}
 export const bootstrapWorkspace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ fullName: z.string().trim().min(2).max(100) }).parse(input))
   .handler(async ({ data, context }) => {
     const membership = await getMembership(context.supabase, context.userId);
     if (membership) return { organizationId: membership.organization_id };
-    if (await hasAnyMembership(context.supabase, context.userId)) throw new Error("Your access has been deactivated");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const organizationId = crypto.randomUUID();
@@ -98,7 +91,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const membership = await getMembership(context.supabase, context.userId);
-    if (!membership) return (await hasAnyMembership(context.supabase, context.userId)) ? { deactivated: true as const } : { needsOnboarding: true as const };
+    if (!membership) return { needsOnboarding: true as const };
     const organizationId = membership.organization_id;
     const [organization, profile, assets, categories, locations, departments] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),

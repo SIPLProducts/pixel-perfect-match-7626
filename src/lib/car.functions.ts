@@ -8,7 +8,7 @@ import { carPublicProfile } from "./car-public-profile";
 export const saveCar = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
  .inputValidator(input => z.object({ car: carSchema, id: z.string().uuid().optional(), expectedUpdatedAt: z.string().datetime({ offset: true }).optional() }).parse(input))
  .handler(async ({ data, context }) => {
- const { data: member, error: membershipError } = await context.supabase.from("user_roles").select("organization_id").eq("user_id", context.userId).eq("active", true).limit(1).maybeSingle();
+ const { data: member, error: membershipError } = await context.supabase.from("user_roles").select("organization_id").eq("user_id", context.userId).limit(1).maybeSingle();
  if (membershipError || !member) throw new Error("Workspace access required");
  if (data.id) {
  if (!data.expectedUpdatedAt) throw new Error("Reopen the car before saving");

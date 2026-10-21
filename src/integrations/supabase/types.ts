@@ -1333,7 +1333,6 @@ export type Database = {
       }
       user_roles: {
         Row: {
-          active: boolean
           created_at: string
           id: string
           organization_id: string
@@ -1341,7 +1340,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          active?: boolean
           created_at?: string
           id?: string
           organization_id: string
@@ -1349,7 +1347,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          active?: boolean
           created_at?: string
           id?: string
           organization_id?: string
@@ -1487,19 +1484,6 @@ export type Database = {
         Returns: number
       }
       is_org_member: { Args: { _organization_id: string }; Returns: boolean }
-      list_workspace_users: {
-        Args: never
-        Returns: {
-          active: boolean
-          created_at: string
-          email: string
-          full_name: string
-          invited: boolean
-          last_sign_in_at: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }[]
-      }
       process_asset_transfer: {
         Args: { _action: string; _transfer_id: string }
         Returns: Database["public"]["Enums"]["workflow_status"]
@@ -1533,7 +1517,6 @@ export type Database = {
         | "auditor"
         | "employee"
         | "viewer"
-        | "client_tester"
       asset_condition: "new" | "good" | "average" | "poor" | "damaged"
       asset_status:
         | "active"
@@ -1689,7 +1672,6 @@ export const Constants = {
         "auditor",
         "employee",
         "viewer",
-        "client_tester",
       ],
       asset_condition: ["new", "good", "average", "poor", "damaged"],
       asset_status: [

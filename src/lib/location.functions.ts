@@ -8,7 +8,7 @@ import { z } from "zod";
 type Client = SupabaseClient<Database>;
 
 async function managerOrg(supabase: Client, userId: string) {
-  const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).eq("active", true).limit(1).maybeSingle();
+  const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).limit(1).maybeSingle();
   if (error || !data) throw new Error("Workspace not found");
   if (!canManageLocations(data.role)) throw new Error("You do not have permission to manage locations");
   return data.organization_id;
