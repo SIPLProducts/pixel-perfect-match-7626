@@ -4,7 +4,7 @@ import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-q
 import { workspaceQueryOptions } from "@/lib/workspace-query";
 import { useWorkspaceSync } from "./use-workspace-sync";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from "recharts";
-import { Activity, Pencil, Archive, ArrowRightLeft, Bell, Boxes, Building2, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, Download, FileSpreadsheet, Filter, History, LayoutDashboard, LoaderCircle, LogOut, Menu, MoreHorizontal, PackagePlus, PanelLeftClose, PanelLeftOpen, QrCode, Search, Settings, ShieldCheck, Upload, UserRound, Users, Wrench, X } from "lucide-react";
+import { Activity, UserCog, Pencil, Archive, ArrowRightLeft, Bell, Boxes, Building2, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, Download, FileSpreadsheet, Filter, History, LayoutDashboard, LoaderCircle, LogOut, Menu, MoreHorizontal, PackagePlus, PanelLeftClose, PanelLeftOpen, QrCode, Search, Settings, ShieldCheck, Upload, UserRound, Users, Wrench, X } from "lucide-react";
 import { toast } from "sonner";
 import { assetErpFields, erpDisplayValue } from "@/lib/asset-erp-fields";
 import { AssetDocumentList } from "./asset-documents";
