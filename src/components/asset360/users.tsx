@@ -60,7 +60,7 @@ function UserDialog({ member, roles, onClose }: { member: Member | null; roles: 
   const [fullName, setFullName] = useState(member?.full_name ?? ""); const [email, setEmail] = useState(""); const [role, setRole] = useState<AppRole>((member?.role as AppRole) ?? "client_tester");
   const [error, setError] = useState("");
   const save = useMutation({
-    mutationFn: () => member ? update({ data: { userId: member.user_id, fullName, role } }) : invite({ data: { fullName, email, role, redirectOrigin: window.location.origin } }),
+    mutationFn: async (): Promise<unknown> => member ? update({ data: { userId: member.user_id, fullName, role } }) : invite({ data: { fullName, email, role, redirectOrigin: window.location.origin } }),
     onSuccess: async () => { await client.invalidateQueries({ queryKey: ["workspace", "users"] }); toast.success(member ? "User updated" : `Invitation sent to ${email}`); onClose(); },
     onError: e => setError(e.message.startsWith("[") ? "Check the highlighted details" : e.message),
   });
