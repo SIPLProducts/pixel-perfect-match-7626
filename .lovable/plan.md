@@ -49,6 +49,11 @@ A new **Users & Access** page under the sidebar's Control group, visible to Supe
 
 ## 3. Invitations and password setup (verified against current settings)
 - **Self sign-up:** confirmed off on the backend (sign-up attempts fail with "Signups not allowed"). It stays off.
+- **Inviting another Super admin:**
+  - An active Super admin can choose the Super admin role in the invite form. Admins can't, and the server refuses it from them.
+  - The invitee joins the inviter's existing workspace with the Super admin role and the same permissions.
+  - No new workspace is created.
+  - Verified after building by inviting a test Super admin and confirming they share the inviter's workspace, data and Users page.
 - **Invitations work with sign-up off:**
   - The invite is sent by a server action using the backend's privileged invite feature. That feature is not affected by the self sign-up setting.
   - The action first confirms the caller is an active Super admin or Admin.
