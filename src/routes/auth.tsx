@@ -87,7 +87,7 @@ function AuthPage() {
           </fieldset>
         </form>
         {mode !== "forgot" && <><div className="my-6 flex items-center gap-4 text-xs text-muted-foreground"><span className="h-px flex-1 bg-auth-border"/>or continue with<span className="h-px flex-1 bg-auth-border"/></div><Button variant="outline" size="lg" className="h-12 w-full gap-3 border-auth-border bg-auth-surface" onClick={signInGoogle} disabled={loading}><span aria-hidden="true" className="text-lg font-bold">G</span>Google</Button></>}
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-x-1 text-sm text-muted-foreground">{mode === "sign-in" ? "New to Asset360?" : mode === "sign-up" ? "Already have an account?" : ""}<Button variant="link" className="h-auto gap-2 px-1 py-1 font-semibold" disabled={loading} onClick={() => changeMode(mode === "sign-in" ? "sign-up" : "sign-in")}>{mode === "forgot" && <ArrowLeft/>}{mode === "sign-in" ? "Create an account" : mode === "forgot" ? "Back to sign in" : "Sign in"}</Button></div>
+        {mode === "forgot" ? <div className="mt-7 flex justify-center"><Button variant="link" className="h-auto gap-2 px-1 py-1 font-semibold" disabled={loading} onClick={() => changeMode("sign-in")}><ArrowLeft/>Back to sign in</Button></div> : <p className="mt-7 text-center text-sm text-muted-foreground">New to Asset360? Ask your workspace administrator for an invitation.</p>}
       </section>
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-auth-border pt-5 text-[11px] text-muted-foreground"><span>© {new Date().getFullYear()} Sharvi Infotech</span><span className="flex items-center gap-1.5"><ShieldCheck className="size-3.5"/>Secure workspace access</span></footer>
     </div>
