@@ -78,7 +78,7 @@ export function AssetForm({ data, asset, onClose }: { data: WorkspaceData; asset
   const section = (title: string, children: ReactNode) => <section className="border-b border-glass-border py-6"><h3 className="mb-5 font-display text-base font-bold">{title}</h3><div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">{children}</div></section>;
   const switchMode = (next: "manual" | "sap") => { if (next === mode) return; if (dirty && !window.confirm("Discard unsaved asset changes?")) return; setForm(initialForm()); setSapFilled(new Set()); setPendingDocuments([]); setErrors({}); setDirty(false); setMode(next); };
   const applySap = (values: Record<string, string> | null) => {
-    setForm(current => { const next = { ...current }; sapFilled.forEach(key => { (next as Record<string, string>)[key] = (initialForm() as Record<string, string>)[key]; }); return values ? { ...next, ...values } : next; });
+    setForm(current => { const next = { ...current }; sapFilled.forEach(key => { (next as Record<string, string>)[key] = (initialForm() as Record<string, string>)[key] ?? ""; }); return values ? { ...next, ...values } : next; });
     setSapFilled(new Set(values ? Object.keys(values) : []));
   };
   return <div className="soft-enter" aria-label={asset ? "Edit asset form" : "Add asset form"}>
