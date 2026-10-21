@@ -23,7 +23,8 @@ function ResetPassword(){
  const [state,setState]=useState<"checking"|"ready"|"invalid">("checking");
 
  useEffect(()=>{
-  const l=initialLink ?? parseAuthLink(window.location.hash, window.location.search); setLink(l);
+  const current=parseAuthLink(window.location.hash, window.location.search);
+  const l=current.kind||current.error||!initialLink ? current : initialLink; setLink(l);
   if(l.error||!l.kind){setState("invalid");return;}
   let done=false;
   const check=async()=>{const {data}=await supabase.auth.getUser(); if(done)return; if(canSetPassword(l,!!data.user)){done=true;setState("ready");}};
