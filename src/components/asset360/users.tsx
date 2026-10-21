@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { Fragment, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, LoaderCircle, Mail, Pencil, Power, Search, ShieldCheck, UserPlus, Users as UsersIcon, X, Minus } from "lucide-react";
@@ -129,8 +129,8 @@ function MatrixTab({ focusRole }: { focusRole: string | null }) {
     <div className="border-b p-4 text-sm text-muted-foreground">Read-only. These are the permissions the server and database currently enforce. V = view, E = edit.</div>
     <div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-sm">
       <thead><tr className="text-xs"><th className="sticky left-0 bg-background px-4 py-3 text-left uppercase tracking-wider text-muted-foreground">Module</th>{appRoles.map(r => <th key={r} colSpan={2} className={`px-2 py-3 text-center font-semibold ${focusRole === r ? "bg-primary/10 text-primary" : ""}`}>{roleInfo[r].label}</th>)}</tr>
-        <tr className="text-[10px] text-muted-foreground"><th className="sticky left-0 bg-background"/>{appRoles.map(r => <><th key={`${r}v`} className={`pb-2 ${focusRole === r ? "bg-primary/10" : ""}`}>V</th><th key={`${r}e`} className={`pb-2 ${focusRole === r ? "bg-primary/10" : ""}`}>E</th></>)}</tr></thead>
-      <tbody>{permissionModules.map(m => <tr key={m.id} className="border-t"><td className="sticky left-0 bg-background px-4 py-2.5 font-medium">{m.label}</td>{appRoles.map(r => { const a = accessFor(r, m.id); return <><td key={`${r}v`} className={`py-2.5 ${focusRole === r ? "bg-primary/5" : ""}`}><Cell allowed={a.view}/></td><td key={`${r}e`} className={`py-2.5 ${focusRole === r ? "bg-primary/5" : ""}`}><Cell allowed={a.edit}/></td></>; })}</tr>)}</tbody>
+        <tr className="text-[10px] text-muted-foreground"><th className="sticky left-0 bg-background"/>{appRoles.map(r => <Fragment key={r}><th className={`pb-2 ${focusRole === r ? "bg-primary/10" : ""}`}>V</th><th className={`pb-2 ${focusRole === r ? "bg-primary/10" : ""}`}>E</th></Fragment>)}</tr></thead>
+      <tbody>{permissionModules.map(m => <tr key={m.id} className="border-t"><td className="sticky left-0 bg-background px-4 py-2.5 font-medium">{m.label}</td>{appRoles.map(r => { const a = accessFor(r, m.id); return <Fragment key={r}><td className={`py-2.5 ${focusRole === r ? "bg-primary/5" : ""}`}><Cell allowed={a.view}/></td><td className={`py-2.5 ${focusRole === r ? "bg-primary/5" : ""}`}><Cell allowed={a.edit}/></td></Fragment>; })}</tr>)}</tbody>
     </table></div>
   </div>;
 }
