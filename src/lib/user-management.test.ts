@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { accessFor, assignableRoles, changeBlocker, inviteSchema, templateRoles } from "./user-management";
