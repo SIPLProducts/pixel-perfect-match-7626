@@ -1,5 +1,28 @@
 # User Management and Client Testing Access
 
+## 0. Confirmations requested before building
+1. **Existing data is preserved.** The database currently holds 5 users. Each one is the Super admin of their own "Sharvi Infotech Demo" workspace: four workspaces have 54 assets each and one has 55. No user, workspace, role, tenant link or record will be merged, recreated, reset or reassigned. Every existing membership stays active because the new active setting defaults to true.
+   - **How the admin's workspace is identified:** never by a chosen ID or by name. On the server, it is always the workspace of whoever is signed in. For example, if bala@sharviinfotech.com invites a tester, the tester joins bala's workspace (9e1709ca…).
+   - **Your choice:** tell me which account should host client testing. Otherwise any Super admin can invite into their own workspace.
+2. **Deactivated users are blocked even with an open session.**
+   - Every database security rule goes through `is_org_member` and `has_role`. Both will require an active membership, so a deactivated person's reads and writes are refused straight away, with no waiting for sign-out.
+   - Every protected server action also reads only active memberships before doing anything.
+   - The account is additionally blocked from signing in again.
+   - Being signed out is only the visible result, not the protection.
+3. **Invitation and password setup** use the existing sign-in setup and the existing reset-password page.
+   - **What I will check:** that the invitation call succeeds, that the account and membership are created in the right workspace, that the invite link lands on the password page, and that the new password then signs in.
+   - **Limitation:** I can't open a real inbox, so whether the email actually arrives must be confirmed by a person on a real invite.
+4. **Client Tester follows the existing permission system.**
+   - It is a new value in the same role list and has no extra rights.
+   - User management accepts Super admin and Admin only.
+   - Master data and transfer approval keep using their existing manager-role lists, and Client Tester isn't in them.
+   - Tests will confirm that each of these is refused.
+5. **Migrations are additive and reversible.**
+   - The database changes are: a new role value, a new column with a default, a new function, and two updated check functions. Nothing is dropped, renamed or rewritten.
+   - **Undo steps:** put the two check functions back to their old form and turn self sign-up back on.
+   - **Testing:** the existing test set, the typecheck, and the security and regression checks in section 8 will be run, and the actual results reported. Nothing will be published.
+
+
 ## 1. Findings from the inspection
 - **Sign-in:** the app uses its existing Cloud accounts. People can sign in with email and password, with Google, or reset a forgotten password through the reset page. Anyone can sign up themselves today.
 - **Workspace:** a person's workspace and role come only from the `user_roles` table. If someone signs in with no role, `bootstrapWorkspace` makes a brand-new "Sharvi Infotech Demo" workspace and makes them its `super_admin`. This is why the database has 5 users in 5 separate workspaces, each one a super_admin. If an invited person signed in under today's rules, they would get their own empty workspace instead of joining yours. Fixing this is the main gap.
