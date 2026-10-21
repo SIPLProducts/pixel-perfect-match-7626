@@ -3,12 +3,19 @@
 ## 1. What the inspection found
 - **Accounts:** existing sign-in (email/password, Google, reset password). Self sign-up is already off on the backend, so the "Create an account" link on the sign-in page only produces an error.
 - **Memberships:** 5 users, each Super admin of their own "Sharvi Infotech Demo" workspace. Roles live only in the separate role table, one row per person per workspace.
-- **Already in the database (no app code uses them yet):** the `client_tester` role value, an `active` flag on memberships (all true), and a workspace-users listing function.
-- **How permissions are enforced today:**
-  - Every workspace table: any active member may read and write (security rules via the membership check).
-  - Manager-only on the server: Categories, Locations, Employees and Excel template links (super_admin, admin, asset_manager, facility_manager, it_manager).
-  - Transfer approval: same manager set.
-  - All other roles (finance, auditor, employee, viewer, client tester) currently have the same access as staff: add/edit assets, transfers, service requests, QRmyCAR.
+- **Already in the database (verified):**
+  - The `client_tester` role value and an `active` flag on memberships (all true).
+  - The membership and role checks already count active memberships only.
+  - A workspace-users listing function that answers only active Super admins and Admins, and only for their own workspace.
+- **How permissions are enforced today (verified in the server code and security rules):**
+  - Database security rules: any active member of the workspace may read and write assets, QR codes, transfers, service requests, attachments, cars and messages, and may read master data.
+  - Exception: Excel template links are limited to Super admin, Admin and Asset manager. This rule does not yet check `active` (a gap, fixed in section 4).
+  - Server checks on top:
+    - Categories: Super admin, Admin, Asset manager.
+    - Locations and Employees: those three plus Facility manager.
+    - Transfers (create, edit, approve): those four plus IT manager.
+  - All other roles (Finance, Auditor, Employee, Viewer, Client tester) can view everything and can add or edit assets, service requests and QRmyCAR, but cannot manage master data or transfers.
+  - Correction to the earlier plan: Client testers can view transfers but cannot create them.
 - **No Users screen** exists; there is no way to invite, edit or deactivate anyone.
 
 ## 2. What the user will see
