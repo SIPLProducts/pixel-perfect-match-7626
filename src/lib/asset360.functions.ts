@@ -100,8 +100,9 @@ export const bootstrapWorkspace = createServerFn({ method: "POST" })
 export const getWorkspaceData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const membership = await getMembership(context.supabase, context.userId);
-    if (!membership) return { needsOnboarding: true as const };
+    const memberships = await getMemberships(context.supabase, context.userId);
+    const membership = memberships.find((m) => m.active) ?? null;
+    if (!membership) return { needsOnboarding: true as const, deactivated: memberships.length > 0 };
     const organizationId = membership.organization_id;
     const [organization, profile, assets, categories, locations, departments] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),
