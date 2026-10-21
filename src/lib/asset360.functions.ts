@@ -15,18 +15,28 @@ import { transferSchema, editTransferSchema } from "@/lib/transfer-schema";
 
 const transferRoles = new Set(["super_admin", "admin", "asset_manager", "facility_manager", "it_manager"]);
 
-async function getMembership(supabase: SupabaseClient<Database>, userId: string) {
-  const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).limit(1).maybeSingle();
+async function getMemberships(supabase: SupabaseClient<Database>, userId: string) {
+  const { data, error } = await supabase.from("user_roles").select("organization_id, role, active").eq("user_id", userId);
   if (error) throw new Error(error.message);
-  return data;
+  return data ?? [];
+}
+
+async function getMembership(supabase: SupabaseClient<Database>, userId: string) {
+  return (await getMemberships(supabase, userId)).find((m) => m.active) ?? null;
 }
 
 export const bootstrapWorkspace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ fullName: z.string().trim().min(2).max(100) }).parse(input))
   .handler(async ({ data, context }) => {
-    const membership = await getMembership(context.supabase, context.userId);
-    if (membership) return { organizationId: membership.organization_id };
+    // Never auto-create a workspace for anyone who already has a membership, even a deactivated one.
+    const memberships = await getMemberships(context.supabase, context.userId);
+    const existing = memberships.find((m) => m.active) ?? memberships[0];
+    if (existing) {
+      if (!existing.active) throw new Error("Your access has been deactivated");
+      return { organizationId: existing.organization_id };
+    }
+
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const organizationId = crypto.randomUUID();
@@ -90,8 +100,9 @@ export const bootstrapWorkspace = createServerFn({ method: "POST" })
 export const getWorkspaceData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const membership = await getMembership(context.supabase, context.userId);
-    if (!membership) return { needsOnboarding: true as const };
+    const memberships = await getMemberships(context.supabase, context.userId);
+    const membership = memberships.find((m) => m.active) ?? null;
+    if (!membership) return { needsOnboarding: true as const, deactivated: memberships.length > 0 };
     const organizationId = membership.organization_id;
     const [organization, profile, assets, categories, locations, departments] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),

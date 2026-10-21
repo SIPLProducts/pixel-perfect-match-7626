@@ -190,6 +190,13 @@
       "when": 1792162429079,
       "tag": "0026_category_templates_manager_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792566168484,
+      "tag": "0027_category_templates_active_members",
+      "breakpoints": true
     }
   ]
 }

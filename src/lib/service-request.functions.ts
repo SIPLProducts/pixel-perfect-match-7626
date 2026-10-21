@@ -7,7 +7,7 @@ export const updateServiceRequest = createServerFn({ method: "POST" })
   .inputValidator(input => serviceRequestSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { data: membership, error: membershipError } = await context.supabase.from("user_roles")
-      .select("organization_id").eq("user_id", context.userId).limit(1).maybeSingle();
+      .select("organization_id").eq("user_id", context.userId).eq("active", true).limit(1).maybeSingle();
     if (membershipError || !membership) throw new Error("Workspace access required");
     const { data: request, error } = await context.supabase.from("maintenance_requests")
       .update(serviceRequestValues(data)).eq("id", data.requestId)
