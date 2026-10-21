@@ -4,7 +4,7 @@ import { selectableLocations } from "@/lib/location-schema";
 import { useState, useRef, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, LoaderCircle, Save } from "lucide-react";
+import { ArrowLeft, Info, LoaderCircle, Save } from "lucide-react";
 import { toast } from "sonner";
 import { createAsset, updateAsset } from "@/lib/asset360.functions";
 import { AssetDocumentPicker, type PendingDocument } from "./asset-documents";
@@ -102,8 +102,8 @@ export function AssetForm({ data, asset, onClose }: { data: WorkspaceData; asset
       </fieldset>
       {uploadProgress && <p role="status" className="mb-4 text-sm text-primary">{uploadProgress}</p>}
       {mutation.error && <p role="alert" className="mb-4 text-sm text-destructive">{mutation.error.message}</p>}
-      <div className="flex flex-wrap justify-end gap-3 border-t border-glass-border py-5"><Button type="button" variant="outline" onClick={close} disabled={mutation.isPending}>Cancel</Button><Button type="submit" variant="hero" disabled={mutation.isPending}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />}{asset ? "Save changes" : "Register asset"}</Button></div>
-    </form>}
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-glass-border py-5">{sap && <p className="mr-auto flex items-center gap-2 text-sm text-muted-foreground"><Info className="size-4" />Saving SAP assets will be enabled once the save workflow is confirmed.</p>}<Button type="button" variant="outline" onClick={close} disabled={mutation.isPending}>Cancel</Button>{!sap && <Button type="submit" variant="hero" disabled={mutation.isPending}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />}{asset ? "Save changes" : "Register asset"}</Button>}</div>
+    </form>
   </div>;
 }
 
