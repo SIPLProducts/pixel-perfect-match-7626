@@ -28,32 +28,66 @@ A new **Users & Access** page under the sidebar's Control group, visible to Supe
 - **Edit** (name, role) and **Deactivate / Reactivate**, each with a confirmation dialog.
 - Loading, empty, validation, success and error states in the existing styles.
 
-**Roles tab**
+**Roles tab** (read-only)
 - One card per existing role (Super admin, Admin, Asset manager, Facility manager, IT manager, Finance, Auditor, Employee, Viewer, Client tester).
 - Each shows a description, a "System role" badge (custom roles are not supported), the number of users with that role, a short permission summary, and **View permissions**, which opens that role's column from the matrix.
 
-**Matrix tab**
-- Rows: Dashboard, Assets, QR labels, Excel import/export, Categories, Locations, Employees, Transfers, Transfer approval, Service requests, QRmyCAR, Reports, Users & Access.
+**Matrix tab** (read-only)
+- Rows: Dashboard, Assets, QR labels, Excel import/export, Categories, Locations, Employees, Excel template links, Transfers, Service requests, QRmyCAR, Reports, Users & Access.
 - Columns: each role, with View and Edit checks or crosses, scrolling sideways on small screens.
-- **Read-only.** It shows exactly what the server and database enforce. Changing it from the screen is not offered: roles are fixed in the server checks, and editable permissions would need a new permission store plus rewritten security rules across every module, which this request asks not to touch.
+- There are no editable permission controls. The backend has no secure way to change permissions per role: they are fixed lists in the server code and fixed security rules.
 
-## 3. Permission rules for user management (server and database)
+### How the displayed permissions match what is enforced
+- **One source.** The matrix is built from the same role lists the server already uses: the category, location, employee and transfer lists. It is not a separate copy, so the screen cannot drift from the checks.
+- **Database rules** are represented as fixed facts:
+  - "any active member may view/edit" for assets, QR, service requests and QRmyCAR;
+  - "view only" for master data unless the role is in the list;
+  - the template-link rule's three roles.
+- **An automated test** compares the template-link list to the live security rule's role set, and asserts each matrix cell against the server lists.
+- **A database check** confirms that one non-manager role (Client tester) is refused on each manager action, and allowed on asset editing, exactly as the matrix shows.
+- **Users & Access:** Super admin and Admin only, the same as the listing function and the new server checks.
+
+## 3. Invitations and password setup (verified against current settings)
+- **Self sign-up:** confirmed off on the backend (sign-up attempts fail with "Signups not allowed"). It stays off.
+- **Invitations work with sign-up off:**
+  - The invite is sent by a server action using the backend's privileged invite feature. That feature is not affected by the self sign-up setting.
+  - The action first confirms the caller is an active Super admin or Admin.
+- **Order of steps in one invite:**
+  1. Check the email isn't already a member of this workspace.
+  2. Send the invitation, which creates the account.
+  3. Create the profile with the given name.
+  4. Add the membership with the chosen role in the caller's own workspace, taken from their active membership on the server.
+  5. If step 3 or 4 fails, the new account is removed, so no orphan account is left behind.
+- **Wrong workspace is impossible:** the invited person already has a membership, so the automatic workspace creation on first sign-in never runs for them. This is enforced in section 5.
+- **Password setup — gap found:**
+  - The current reset-password page accepts only password-recovery links, so it would reject an invitation link.
+  - The plan updates that page to also accept invitation links and show "Set your password".
+  - Existing reset behaviour is unchanged.
+- **Email delivery:**
+  - No custom email domain is set up, so invitation emails come from the default built-in sender, which has an hourly limit.
+  - Re-sending an invite to an Invited user is supported.
+- **Google:** an invited person may also sign in with Google using the same email. Unknown emails cannot create accounts.
+- **What I'll verify after building:**
+  - Invite a test address: the account, profile and membership are created in the right workspace with the right role.
+  - Generate that user's invite link on the server, open it in the browser, set a password, and sign in.
+  - **Limitation:** a person must confirm the email actually arrives in a real inbox.
+
+## 4. Permission rules for user management (server and database)
 - Super admins can invite and manage anyone in their own workspace.
 - Admins can manage all roles except Super admin and Admin.
 - Nobody can change their own role or deactivate themselves.
 - Each workspace always keeps at least one active Super admin.
 - The workspace is always taken from the signed-in admin's own active membership, never from the browser.
 - **Deactivated people:**
-  - The membership and role checks count active memberships only, so their reads and writes are refused immediately, even with an open session.
+  - The membership and role checks already count active memberships only, so their reads and writes are refused immediately, even with an open session.
   - Their account is also blocked from signing in again.
   - The app shows "Your access has been deactivated" and signs them out.
 - **Existing people:** a person who already has any membership, even an inactive one, never gets a new workspace auto-created.
 
-## 4. Database changes (additive, reversible)
-1. Update the membership and role check functions to require an active membership. Every existing security rule uses them, so no rule is rewritten or loosened.
-2. Verify the existing workspace-users listing function only answers active Super admins and Admins of the caller's workspace; tighten it if not.
+## 5. Database changes (additive, reversible)
+1. Add an `active` check to the Excel template-link security rule, the only rule that reads roles directly. Its role set stays the same.
 
-Nothing is dropped or renamed, and no asset, category, QR, transfer or SAP data changes. To undo: restore the two check functions.
+The membership checks and listing function already meet the requirements, so they aren't changed. Nothing is dropped or renamed, and no asset, category, QR, transfer or SAP data changes. To undo, restore that one rule.
 
 ## 5. Code changes
 - `src/lib/user-management.ts` (new): invite/edit form checks, the role catalogue (descriptions, summaries) and the permission matrix, taken from the same manager-role lists the server uses, plus the rules for which roles each admin may assign, self-change and last Super admin.
