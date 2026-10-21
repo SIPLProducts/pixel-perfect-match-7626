@@ -1,24 +1,23 @@
-import { describe, expect, test } from "bun:test";
+import { test } from "node:test";
+import assert from "node:assert/strict";
 import { canSetPassword, parseAuthLink } from "./auth-link";
 
-describe("auth link", () => {
-  test("invite link with session is accepted", () => {
-    const l = parseAuthLink("#access_token=x&type=invite", "");
-    expect(l.kind).toBe("invite");
-    expect(canSetPassword(l, true)).toBe(true);
-  });
-  test("recovery link with session is accepted", () => {
-    expect(canSetPassword(parseAuthLink("#type=recovery", ""), true)).toBe(true);
-  });
-  test("expired link is refused", () => {
-    const l = parseAuthLink("#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired", "");
-    expect(l.error).toBe("Email link is invalid or has expired");
-    expect(canSetPassword(l, true)).toBe(false);
-  });
-  test("missing session is refused", () => {
-    expect(canSetPassword(parseAuthLink("#type=invite", ""), false)).toBe(false);
-  });
-  test("plain visit is refused", () => {
-    expect(canSetPassword(parseAuthLink("", ""), true)).toBe(false);
-  });
+test("invite link with session is accepted", () => {
+  const l = parseAuthLink("#access_token=x&type=invite", "");
+  assert.equal(l.kind, "invite");
+  assert.equal(canSetPassword(l, true), true);
+});
+test("recovery link with session is accepted", () => {
+  assert.equal(canSetPassword(parseAuthLink("#type=recovery", ""), true), true);
+});
+test("expired link is refused", () => {
+  const l = parseAuthLink("#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired", "");
+  assert.equal(l.error, "Email link is invalid or has expired");
+  assert.equal(canSetPassword(l, true), false);
+});
+test("missing session is refused", () => {
+  assert.equal(canSetPassword(parseAuthLink("#type=invite", ""), false), false);
+});
+test("plain visit is refused", () => {
+  assert.equal(canSetPassword(parseAuthLink("", ""), true), false);
 });
