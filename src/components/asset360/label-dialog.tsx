@@ -40,7 +40,7 @@ export function LabelDialog({ open, onOpenChange, assets, organization }: { open
         const url = URL.createObjectURL(pdf.output("blob"));
         printWindow.location.href = url;
         window.setTimeout(() => URL.revokeObjectURL(url), 300000);
-      } else await pdf.save("Sharvi-Asset360-QR-Labels.pdf", { returnPromise: true }); }, () => record({ data: { operationId, assetIds: ready.map(asset => asset.id), action: print ? "print" : "pdf" } }));
+      } else await pdf.save("HBL-Asset360-QR-Labels.pdf", { returnPromise: true }); }, () => record({ data: { operationId, assetIds: ready.map(asset => asset.id), action: print ? "print" : "pdf" } }));
       void queryClient.invalidateQueries({ queryKey: ["workspace"] });
     } catch (error) { printWindow?.close(); toast.error(error instanceof Error ? error.message : "Could not prepare labels"); }
     finally { inProgress.current = false; setBusy(false); }

@@ -150,5 +150,5 @@ export async function downloadAssetTemplate(masters: ImportMasters) {
   const workbook = await createAssetTemplateWorkbook(masters);
   const buffer = await workbook.xlsx.writeBuffer();
   const url = URL.createObjectURL(new Blob([new Uint8Array(buffer)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-  const link = document.createElement("a"); link.href = url; link.download = "Sharvi-Asset360-Import-Template.xlsx"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const link = document.createElement("a"); link.href = url; link.download = "HBL-Asset360-Import-Template.xlsx"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

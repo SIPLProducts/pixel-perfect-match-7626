@@ -10,9 +10,9 @@ import campusImage from "@/assets/enterprise-campus.jpg";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [
-    { title: "Sign in | Sharvi Asset360" },
-    { name: "description", content: "Secure access to Sharvi Asset360 enterprise asset management." },
-    { property: "og:title", content: "Sign in to Sharvi Asset360" },
+    { title: "Sign in | HBL Asset360" },
+    { name: "description", content: "Secure access to HBL Asset360 enterprise asset management." },
+    { property: "og:title", content: "Sign in to HBL Asset360" },
     { property: "og:description", content: "Secure enterprise asset lifecycle management." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
@@ -70,12 +70,12 @@ function AuthPage() {
     <div className="flex min-w-0 flex-col px-6 py-7 sm:px-12 lg:px-16 lg:py-10">
       <header className="flex items-center gap-3">
         <img src="/icons/icon-192.png" alt="" width={44} height={44} className="size-11 rounded-lg" />
-        <div><p className="font-display text-lg font-bold">Sharvi Asset360</p><p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Enterprise asset management</p></div>
+        <div><p className="font-display text-lg font-bold">HBL Asset360</p><p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Enterprise asset management</p></div>
       </header>
       <section className="soft-enter mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center py-12 lg:py-16" aria-labelledby="auth-title">
         <div className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary"><span className="h-px w-6 bg-primary"/>Workspace access</div>
         <h1 id="auth-title" className="font-display text-3xl font-bold sm:text-4xl">{mode === "sign-in" ? "Welcome back." : mode === "sign-up" ? "Create your account." : "Forgot your password?"}</h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">{mode === "sign-in" ? "Sign in to your Sharvi Asset360 workspace." : mode === "sign-up" ? "Start with your name and work email." : "Enter your account email to receive a recovery link."}</p>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{mode === "sign-in" ? "Sign in to your HBL Asset360 workspace." : mode === "sign-up" ? "Start with your name and work email." : "Enter your account email to receive a recovery link."}</p>
         {notice && <div role="status" className="mt-6 flex items-start gap-3 rounded-lg border border-success/25 bg-success/5 p-4 text-sm leading-6"><CheckCircle2 className="mt-1 size-4 shrink-0 text-success"/>{notice}</div>}
         {errorMessage && <div role="alert" className="mt-6 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">{errorMessage}</div>}
         <form onSubmit={submit} className="mt-8 space-y-5" aria-busy={loading}>
@@ -89,14 +89,14 @@ function AuthPage() {
         {mode !== "forgot" && <><div className="my-6 flex items-center gap-4 text-xs text-muted-foreground"><span className="h-px flex-1 bg-auth-border"/>or continue with<span className="h-px flex-1 bg-auth-border"/></div><Button variant="outline" size="lg" className="h-12 w-full gap-3 border-auth-border bg-auth-surface" onClick={signInGoogle} disabled={loading}><span aria-hidden="true" className="text-lg font-bold">G</span>Google</Button></>}
         {mode === "forgot" ? <div className="mt-7 flex justify-center"><Button variant="link" className="h-auto gap-2 px-1 py-1 font-semibold" disabled={loading} onClick={() => changeMode("sign-in")}><ArrowLeft/>Back to sign in</Button></div> : <p className="mt-7 text-center text-sm text-muted-foreground">New to Asset360? Ask your workspace administrator for an invitation.</p>}
       </section>
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-auth-border pt-5 text-[11px] text-muted-foreground"><span>© {new Date().getFullYear()} Sharvi Infotech</span><span className="flex items-center gap-1.5"><ShieldCheck className="size-3.5"/>Secure workspace access</span></footer>
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-auth-border pt-5 text-[11px] text-muted-foreground"><span>© 2026 HBL</span><span className="flex items-center gap-1.5"><ShieldCheck className="size-3.5"/>Secure workspace access</span></footer>
     </div>
-    <aside className="relative hidden min-h-svh overflow-hidden lg:block" aria-label="Sharvi Asset360 enterprise campus illustration">
+    <aside className="relative hidden min-h-svh overflow-hidden lg:block" aria-label="HBL Asset360 enterprise campus illustration">
       <img src={campusImage} alt="Illustrative modern enterprise campus with landscaped grounds" width={1024} height={1536} className="absolute inset-0 h-full w-full object-cover" />
       <div className="auth-photo-overlay absolute inset-0"/>
       <div className="relative flex h-full min-h-svh flex-col justify-between p-12 text-auth-photo-text">
-        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"><ShieldCheck className="size-4"/>Sharvi Infotech</div>
-        <div className="max-w-md pb-4"><p className="mb-4 text-xs font-medium uppercase tracking-[0.16em]">Connected operations</p><h2 className="font-display text-4xl font-semibold leading-tight">Sharvi Asset360</h2><p className="mt-4 max-w-sm text-lg leading-7 text-auth-photo-text/85">Every asset. Every location.<br/>One connected workspace.</p><div className="mt-8 flex gap-6 border-t border-auth-photo-text/25 pt-6 text-xs text-auth-photo-text/80"><span>Scan.</span><span>Track.</span><span>Verify.</span></div></div>
+        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em]"><ShieldCheck className="size-4"/>HBL</div>
+        <div className="max-w-md pb-4"><p className="mb-4 text-xs font-medium uppercase tracking-[0.16em]">Connected operations</p><h2 className="font-display text-4xl font-semibold leading-tight">HBL Asset360</h2><p className="mt-4 max-w-sm text-lg leading-7 text-auth-photo-text/85">Every asset. Every location.<br/>One connected workspace.</p><div className="mt-8 flex gap-6 border-t border-auth-photo-text/25 pt-6 text-xs text-auth-photo-text/80"><span>Scan.</span><span>Track.</span><span>Verify.</span></div></div>
       </div>
     </aside>
   </main>;

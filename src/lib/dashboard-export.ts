@@ -22,14 +22,14 @@ const saveBlob = (blob: Blob, filename: string) => {
 
 export function exportDashboardCsv(report: DashboardReport) {
   const content = [
-    csvRows([["Sharvi Asset360 Dashboard Report"], ["Organization", report.organization], ["Generated", report.generatedAt], ["Applied filters", report.filters.join(" | ")]]),
+    csvRows([["HBL Asset360 Dashboard Report"], ["Organization", report.organization], ["Generated", report.generatedAt], ["Applied filters", report.filters.join(" | ")]]),
     csvRows([["Dashboard figures"], ["Metric", "Value"], ...report.metrics]),
     csvRows([["Equipment life profile"], ["Age band", "Assets"], ...report.ageProfile]),
     csvRows([["Current status"], ["Status", "Assets"], ...report.statusProfile]),
     csvRows([["Needs attention"], ["Item", "Assets"], ...report.attention]),
     csvRows([["Filtered asset list"], ["Asset ID", "Name", "Category", "Location", "Custodian", "Installed", "Age", "Status", "Purchase cost", "Current value"], ...report.assets]),
   ].join("\n\n");
-  saveBlob(new Blob([`\uFEFF${content}`], { type: "text/csv;charset=utf-8" }), "Sharvi-Asset360-Dashboard.csv");
+  saveBlob(new Blob([`\uFEFF${content}`], { type: "text/csv;charset=utf-8" }), "HBL-Asset360-Dashboard.csv");
 }
 
 export async function exportDashboardPdf(report: DashboardReport) {
@@ -41,7 +41,7 @@ export async function exportDashboardPdf(report: DashboardReport) {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(19);
-  doc.text("Sharvi Asset360", 14, 13);
+  doc.text("HBL Asset360", 14, 13);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.text("Filtered dashboard report", 14, 20);
@@ -87,8 +87,8 @@ export async function exportDashboardPdf(report: DashboardReport) {
     didDrawPage: ({ pageNumber }) => {
       doc.setTextColor(90, 100, 112);
       doc.setFontSize(7);
-      doc.text(`Sharvi Asset360  |  Page ${pageNumber}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 7, { align: "right" });
+      doc.text(`HBL Asset360  |  Page ${pageNumber}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 7, { align: "right" });
     },
   });
-  doc.save("Sharvi-Asset360-Dashboard.pdf");
+  doc.save("HBL-Asset360-Dashboard.pdf");
 }
