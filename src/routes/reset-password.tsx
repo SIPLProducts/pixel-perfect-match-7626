@@ -12,7 +12,7 @@ import { canSetPassword, parseAuthLink, type AuthLink } from "@/lib/auth-link";
 const initialLink: AuthLink | null = typeof window !== "undefined" ? parseAuthLink(window.location.hash, window.location.search) : null;
 
 export const Route = createFileRoute("/reset-password")({
- head: () => ({ meta: [{ title: "Reset password | Sharvi Asset360" },{ name: "description", content: "Set a new password for your Sharvi Asset360 account." },{ property: "og:title", content: "Reset Sharvi Asset360 password" },{ property: "og:description", content: "Secure account recovery." },{ property: "og:type", content: "website" },{ name: "twitter:card", content: "summary" }] }),
+ head: () => ({ meta: [{ title: "Reset password | HBL Asset360" },{ name: "description", content: "Set a new password for your HBL Asset360 account." },{ property: "og:title", content: "Reset HBL Asset360 password" },{ property: "og:description", content: "Secure account recovery." },{ property: "og:type", content: "website" },{ name: "twitter:card", content: "summary" }] }),
  component: ResetPassword,
 });
 

@@ -86,10 +86,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Sharvi Asset360" },
+      { title: "HBL Asset360" },
       { name: "description", content: "Secure QR-powered asset lifecycle management for modern enterprises." },
-      { name: "author", content: "Sharvi Infotech" },
-      { property: "og:title", content: "Sharvi Asset360" },
+      { name: "author", content: "HBL" },
+      { property: "og:title", content: "HBL Asset360" },
       { property: "og:description", content: "Scan, track, verify, and manage every asset." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -38,7 +38,7 @@ export async function carLabelImage(car: LabelCar, settings: CarLabelSettings = 
   ctx.fillText(value, width / 2, y);
  };
  const brandSize = Math.min(base * 0.035, height * 0.035) * settings.brandingScale / 100;
- text("Sharvi's QRmyAssets", brandSize, height * 0.055);
+ text("HBL QRmyAssets", brandSize, height * 0.055);
  text("SCAN TO", Math.min(base * 0.085, height * 0.075), height * 0.14, true);
  text("CONTACT OWNER", Math.min(base * 0.071, height * 0.065), height * 0.214, true);
  text("QRmyCAR", Math.min(base * 0.03, height * 0.03) * settings.brandingScale / 100, height * 0.263);

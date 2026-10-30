@@ -14,9 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 export const Route = createFileRoute("/a/$token")({
   loader: ({ params }) => getPublicAsset({ data: { token: params.token } }),
   head: () => ({ meta: [
-    { title: "Asset Digital Profile | Sharvi Asset360" },
+    { title: "Asset Digital Profile | HBL Asset360" },
     { name: "description", content: "View registered equipment details or report an equipment breakdown with a photo." },
-    { property: "og:title", content: "Asset Digital Profile | Sharvi Asset360" },
+    { property: "og:title", content: "Asset Digital Profile | HBL Asset360" },
     { property: "og:description", content: "Registered asset details and equipment breakdown reporting." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
@@ -59,7 +59,7 @@ function PublicAssetPage() {
         </div>;
   return <main className="app-backdrop min-h-screen px-3 py-5 sm:px-4 sm:py-10">
     <section className="mx-auto w-full max-w-lg space-y-4">
-      <header className="flex items-center gap-3 px-1"><div className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary font-display font-bold text-primary-foreground shadow-brand">A</div><div className="min-w-0"><p className="truncate font-display font-bold leading-tight">Sharvi Asset360</p><p className="text-xs text-muted-foreground">Asset digital profile</p></div></header>
+      <header className="flex items-center gap-3 px-1"><div className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary font-display font-bold text-primary-foreground shadow-brand">A</div><div className="min-w-0"><p className="truncate font-display font-bold leading-tight">HBL Asset360</p><p className="text-xs text-muted-foreground">Asset digital profile</p></div></header>
       <div className="rounded-2xl bg-primary p-5 text-primary-foreground shadow-brand sm:p-6">
         <div className="flex items-start justify-between gap-3"><p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">Asset summary</p><span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-background px-2.5 py-1 text-[11px] font-bold text-success"><CheckCircle2 className="size-3.5"/>Registered</span></div>
         <h1 className="mt-3 break-words font-display text-xl font-bold leading-snug sm:text-2xl">{asset.asset_name}</h1>
