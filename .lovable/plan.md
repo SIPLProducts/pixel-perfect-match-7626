@@ -51,7 +51,7 @@ Review only. Nothing has been changed. Each section below is a separate plan you
 3. Make the category filter hierarchy-aware: choosing a parent includes its subcategories.
 4. Offer each real asset status as a filter choice, alongside the Active/Inactive grouping.
 5. Add "Export Excel" next to CSV/PDF. It uses the same `DashboardReport` data, with one worksheet per section.
-6. Optional new charts, built only from existing data: assets by category (top 8) and by location. These need approval because they add visible content.
+6. Add the Assets by Category (top 8) and Assets by Location charts. Both use only live, tenant-scoped data.
 - All figures stay calculated from live tenant data. No sample data.
 - Risk: totals change once the misleading verification figure is replaced. This is expected and should be communicated to users.
 
