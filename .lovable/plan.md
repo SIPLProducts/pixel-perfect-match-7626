@@ -75,6 +75,10 @@ Review only. Nothing has been changed. Each section below is a separate plan you
 - Browser check signed in as a manager: dashboard figures match the asset register counts; download each Excel file and read it back to confirm rows and headings; check mobile and desktop screenshots, including dark mode.
 - Regression check: add/edit asset, import, QR labels, transfers, service requests, SAP mode and Users & Access still work.
 
-## Questions before building
-- Should "Pending verification" be replaced by "Open service requests" or simply removed?
-- Should the new category and location charts (Plan B step 6) be added?
+## Confirmed clarifications
+1. Dashboard: "Pending verification" is replaced by "Open service requests". It counts only real service request records that are not closed or completed. It is never derived from asset status.
+2. Both new charts are included: Assets by Category (top 8) and Assets by Location. They use only live, tenant-scoped workspace data.
+3. The Verification Status report card is removed.
+4. All existing functionality, calculations, database structures, SAP/API integrations, QR workflows, asset import/export, permissions, tenant isolation and RLS policies are preserved.
+5. The work is done in steps: Plan A, then Plan B, then Plan C. The full test suite runs after each step, and every affected module is checked in the browser before the work is called complete.
+6. No dummy data, no new database tables and no backend changes.
