@@ -92,3 +92,14 @@ export async function exportDashboardPdf(report: DashboardReport) {
   });
   doc.save("HBL-Asset360-Dashboard.pdf");
 }
+export async function exportDashboardXlsx(report: DashboardReport) {
+  const { exportReportXlsx } = await import("./report-export");
+  const meta = { organization: report.organization, generatedAt: report.generatedAt, filters: report.filters };
+  await exportReportXlsx([
+    { title: "Dashboard figures", headings: ["Metric", "Value"], rows: report.metrics },
+    { title: "Equipment life profile", headings: ["Age band", "Assets"], rows: report.ageProfile },
+    { title: "Current status", headings: ["Status", "Assets"], rows: report.statusProfile },
+    { title: "Needs attention", headings: ["Item", "Count"], rows: report.attention },
+    { title: "Filtered assets", headings: ["Asset ID", "Name", "Category", "Location", "Custodian", "Installed", "Age", "Status", "Purchase cost", "Current value"], rows: report.assets },
+  ], meta, "HBL-Asset360-Dashboard");
+}
