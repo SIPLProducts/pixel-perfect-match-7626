@@ -45,7 +45,7 @@ export function monthlyCounts(dates: readonly (string | null | undefined)[], mon
     buckets.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, name: monthLabel.format(d), value: 0 });
   }
   const index = new Map(buckets.map((b, i) => [b.key, i]));
-  for (const value of dates) { const i = value ? index.get(value.slice(0, 7)) : undefined; if (i !== undefined) buckets[i].value++; }
+  for (const value of dates) { const i = value ? index.get(value.slice(0, 7)) : undefined; if (i !== undefined) buckets[i]!.value++; }
   return buckets;
 }
 
