@@ -34,7 +34,7 @@ function Panel({ title, subtitle, children, action }: { title: string; subtitle?
 
 function HBars({ data, fill }: { data: { name: string; value: number }[]; fill: string }) {
   if (!data.length) return <EmptyState icon={SearchX} title="No data yet" />;
-  return <div style={{ height: Math.max(180, data.length * 30 + 20) }}><ResponsiveContainer width="100%" height="100%"><BarChart data={data} layout="vertical" margin={{ left: 8, right: 24 }}><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} /><YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11, fill: "var(--foreground)" }} /><ChartTooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--accent)" }} /><Bar dataKey="value" name="Assets" fill={fill} radius={[0, 6, 6, 0]} barSize={16} /></BarChart></ResponsiveContainer></div>;
+  return <div style={{ height: Math.max(180, data.length * 30 + 20) }}><ResponsiveContainer width="100%" height="100%"><BarChart data={data} layout="vertical" margin={{ left: 8, right: 24 }}><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} /><YAxis type="category" dataKey="name" width={150} interval={0} tick={{ fontSize: 11, fill: "var(--foreground)" }} /><ChartTooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--accent)" }} /><Bar dataKey="value" name="Assets" fill={fill} radius={[0, 6, 6, 0]} barSize={16} /></BarChart></ResponsiveContainer></div>;
 }
 
 function Donut({ data, colors, centre }: { data: { name: string; value: number }[]; colors: string[]; centre: string }) {
@@ -74,7 +74,7 @@ export function Dashboard({ data, setActive, onAsset }: { data: WorkspaceData; s
 
   const added = monthlyCounts(assets.map((a) => a.created_at));
   const lifecycle = countBy(assets, (a) => a.status).map((d) => ({ ...d, label: pretty(d.name) }));
-  const topCategories = countBy(assets, (a) => categoryPath(a.parent_category_name, a.asset_categories?.name), 10);
+  const topCategories = countBy(assets, (a) => a.asset_categories?.name, 10);
   const topLocations = countBy(assets, (a) => a.locations?.name, 10);
   const serviceTrend = monthlyCounts(requests.map((r) => r.created_at));
   const serviceTypes = countBy(requests, (r) => pretty(r.maintenance_type ?? "other"), 6);
@@ -154,7 +154,7 @@ export function Dashboard({ data, setActive, onAsset }: { data: WorkspaceData; s
       </div>
     </section>
 
-    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-9">
+    <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-9">
       {kpiCards.map(([label, value, delta, icon, tone, target]) => target
         ? <button key={label} type="button" onClick={() => setActive(target)} className="text-left transition hover:-translate-y-0.5"><Kpi label={label} value={value.toLocaleString()} delta={delta} icon={icon} tone={tone} /></button>
         : <Kpi key={label} label={label} value={value.toLocaleString()} delta={delta} icon={icon} tone={tone} />)}
