@@ -7,6 +7,8 @@ export type DashboardReport = {
   statusProfile: Array<[string, number]>;
   attention: Array<[string, number]>;
   assets: Array<[string, string, string, string, string, string, string, string, string, string]>;
+  /** Additional dashboard sections appended after the existing ones in every export format. */
+  sections?: Array<{ title: string; headings: string[]; rows: Array<Array<string | number>> }>;
 };
 
 const csvCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
@@ -28,6 +30,7 @@ export function exportDashboardCsv(report: DashboardReport) {
     csvRows([["Current status"], ["Status", "Assets"], ...report.statusProfile]),
     csvRows([["Needs attention"], ["Item", "Assets"], ...report.attention]),
     csvRows([["Filtered asset list"], ["Asset ID", "Name", "Category", "Location", "Custodian", "Installed", "Age", "Status", "Purchase cost", "Current value"], ...report.assets]),
+    ...(report.sections ?? []).map((section) => csvRows([[section.title], section.headings, ...section.rows])),
   ].join("\n\n");
   saveBlob(new Blob([`\uFEFF${content}`], { type: "text/csv;charset=utf-8" }), "HBL-Asset360-Dashboard.csv");
 }
@@ -90,6 +93,22 @@ export async function exportDashboardPdf(report: DashboardReport) {
       doc.text(`HBL Asset360  |  Page ${pageNumber}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 7, { align: "right" });
     },
   });
+  for (const section of report.sections ?? []) {
+    doc.addPage();
+    doc.setTextColor(25, 85, 116);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(section.title, 14, 16);
+    autoTable(doc, {
+      startY: 21,
+      head: [section.headings],
+      body: section.rows,
+      margin: { left: 14, right: 14, bottom: 15 },
+      theme: "striped",
+      styles: { font: "helvetica", fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [25, 85, 116] },
+    });
+  }
   doc.save("HBL-Asset360-Dashboard.pdf");
 }
 export async function exportDashboardXlsx(report: DashboardReport) {
@@ -101,5 +120,6 @@ export async function exportDashboardXlsx(report: DashboardReport) {
     { title: "Current status", headings: ["Status", "Assets"], rows: report.statusProfile },
     { title: "Needs attention", headings: ["Item", "Count"], rows: report.attention },
     { title: "Filtered assets", headings: ["Asset ID", "Name", "Category", "Location", "Custodian", "Installed", "Age", "Status", "Purchase cost", "Current value"], rows: report.assets },
+    ...(report.sections ?? []),
   ], meta, "HBL-Asset360-Dashboard");
 }
