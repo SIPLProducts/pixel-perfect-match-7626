@@ -28,11 +28,11 @@ Assets: 271 across 5 workspaces. Status counts: active 120, assigned 41, under m
 
 ```text
 [Filter bar: Category (parent-aware) | Location/Plant | Status | Date range (added) | Reset]
-[KPI row (colour cards): Total | Active | Assigned | Under maintenance | Missing | Disposed/Retired | Open service req. | Warranty expiring 90d]
-[Monthly asset additions (bar/line, 12 months)] [Asset lifecycle donut (status)]
+[KPI row (colour cards): Total | Active | Assigned | Under maintenance | Missing | Disposed | Retired | Open service req. | Warranty expiring 90d]
+[Assets Added to Asset360 (monthly, 12 months)] [Asset lifecycle donut (status)]
 [Top 10 categories (horizontal bars)]          [Top 10 locations/plants (horizontal bars)]
 [Service requests monthly trend + by type]     [Warranty expiry donut: expired/30/60/90/later]
-[QR insights card: coverage %, labels printed, never printed, QR breakdown reports]
+[QR insights: Active QR codes | Labels printed | Never printed | QR breakdown reports (no scan counts)]
 [Plant-wise summary table: plant | total | active | maintenance | missing | open requests]
 [Tables: Upcoming warranty expiries | Recent assets | Open service requests]
 ```
@@ -50,6 +50,9 @@ All widgets respond to the filter bar. Empty states say "No data yet" rather tha
 - Data: `WorkspaceData` assets, maintenance, transfers, qr prints, categories, locations from `asset360.functions.ts`. QR print ledger is used if already in the workspace payload; if not, it is read through the existing QR print history helper (no schema change).
 - Risks: monthly additions reflect import date (most assets were imported together, so the chart may show one spike) — labelled "Added to Asset360". Large workspaces: all aggregation is memoised client-side.
 
-## Open questions
-- Should Monthly Additions use created date now, and switch to capitalization date once that field is populated?
-- Hide Disposed/Retired KPI while it is 0, or always show it?
+## Decisions (confirmed by client)
+1. The monthly chart uses the asset created date and is titled "Assets Added to Asset360". It is not shown as a purchase or capitalization trend.
+2. Disposed and Retired KPI cards are always shown as two separate cards, even when the value is 0.
+3. QR analytics show only existing QR data, as separate figures: "Active QR codes" (assets with an active QR) and "Labels printed" (print/PDF/PNG outputs from the print ledger), plus assets never printed and QR breakdown reports. No scan counts, because scans are not logged.
+4. Workspace security: every KPI, chart, table and export uses only the signed-in user's own active workspace, from the existing workspace-filtered data load protected by tenant isolation and RLS. Nothing combines workspaces. The 271-asset / 5-workspace figure above comes from a database-wide inspection only. Testing includes signing in and checking that dashboard totals match that workspace's own counts.
+5. Existing features, QR workflows, permissions, exports and database logic stay as they are. No schema, RLS, SAP or QR changes.
