@@ -41,7 +41,7 @@ it("buckets assets added per month over the last 12 months only", () => {
   const m = monthlyCounts(["2026-11-01T10:00:00Z", "2026-11-03", "2026-01-15", "2025-11-30"], 12, now);
   assert.equal(m.length, 12);
   assert.equal(m[11].value, 2);
-  assert.equal(m[2].value, 1); // Jan 2026
+  assert.equal(m[1].value, 1); // Jan 2026 (window starts Dec 2025)
   assert.equal(m.reduce((n, b) => n + b.value, 0), 3); // Nov 2025 is outside the window
 });
 
