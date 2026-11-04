@@ -42,7 +42,7 @@ All widgets respond to the filter bar. Empty states say "No data yet" rather tha
 1. Add pure helpers for monthly buckets, warranty bands, status groups, QR coverage and plant summary in the existing report helpers file, with tests.
 2. Build the new dashboard sections as small components using existing chart library and design colours (dark-mode safe).
 3. Replace the dashboard body in the workspace screen; keep navigation actions (clicking an asset, "view all").
-4. Extend the dashboard Excel export with the new sheets.
+4. Extend all three existing dashboard exports (CSV, PDF and Excel) with the new sections (KPIs, monthly additions, lifecycle, top categories/locations, service requests, warranty bands, QR insights, plant summary). Existing export buttons, file names and current contents are kept; new sections are only appended.
 5. Run the full test suite, check desktop and mobile in a signed-in browser, confirm numbers match the database counts above.
 
 ## Technical details
@@ -50,7 +50,7 @@ All widgets respond to the filter bar. Empty states say "No data yet" rather tha
 - Data: `WorkspaceData` assets, maintenance, transfers, qr prints, categories, locations from `asset360.functions.ts`. QR print ledger is used if already in the workspace payload; if not, it is read through the existing QR print history helper (no schema change).
 - Risks: monthly additions reflect import date (most assets were imported together, so the chart may show one spike) — labelled "Added to Asset360". Large workspaces: all aggregation is memoised client-side.
 
-## Decisions (confirmed by client)
+## Implementation Decisions
 1. The monthly chart uses the asset created date and is titled "Assets Added to Asset360". It is not shown as a purchase or capitalization trend.
 2. Disposed and Retired KPI cards are always shown as two separate cards, even when the value is 0.
 3. QR analytics show only existing QR data, as separate figures: "Active QR codes" (assets with an active QR) and "Labels printed" (print/PDF/PNG outputs from the print ledger), plus assets never printed and QR breakdown reports. No scan counts, because scans are not logged.
