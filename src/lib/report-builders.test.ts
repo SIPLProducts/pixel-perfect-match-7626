@@ -33,3 +33,38 @@ import { reportHeaderRows } from "./report-export";
     assert.deepEqual(reportHeaderRows({ organization: "HBL", generatedAt: "now", filters: ["Category: IT", "Location: Plant 1"] }, "Transfers")[3], ["Applied filters", "Category: IT | Location: Plant 1"]);
   });
 
+
+import { monthlyCounts, plantSummary, qrInsights, warrantyBands } from "./report-builders";
+
+it("buckets assets added per month over the last 12 months only", () => {
+  const now = new Date(2026, 10, 4);
+  const m = monthlyCounts(["2026-11-01T10:00:00Z", "2026-11-03", "2026-01-15", "2025-11-30"], 12, now);
+  assert.equal(m.length, 12);
+  assert.equal(m[11].value, 2);
+  assert.equal(m[2].value, 1); // Jan 2026
+  assert.equal(m.reduce((n, b) => n + b.value, 0), 3); // Nov 2025 is outside the window
+});
+
+it("groups warranty end dates into expiry bands", () => {
+  const now = new Date(2026, 10, 4);
+  const b = Object.fromEntries(warrantyBands(["2026-11-03", "2026-11-04", "2026-12-04", "2026-12-05", "2027-02-02", "2027-03-01", null], now).map((x) => [x.name, x.value]));
+  assert.deepEqual(b, { "Expired": 1, "0–30 days": 2, "31–60 days": 1, "61–90 days": 1, "Over 90 days": 1, "Not recorded": 1 });
+});
+
+it("keeps active QR codes separate from printed labels and never counts scans", () => {
+  const q = qrInsights([
+    { qr_print_count: 2, asset_qr_codes: [{ active: true }] },
+    { qr_print_count: 0, asset_qr_codes: [{ active: true }] },
+    { qr_print_count: 0, asset_qr_codes: [] },
+  ], [{ source: "qr" }, { source: "manual" }]);
+  assert.deepEqual(q, { activeQrCodes: 2, labelsPrinted: 2, neverPrinted: 2, qrBreakdownReports: 1 });
+});
+
+it("summarises plants with open requests excluding completed ones", () => {
+  const rows = plantSummary(
+    [{ asset_id: "A1", plant: "P1", status: "active" }, { asset_id: "A2", plant: "P1", status: "missing" }, { asset_id: "A3", plant: "", status: "under_maintenance" }],
+    [{ status: "pending", assets: { asset_id: "A1" } }, { status: "completed", assets: { asset_id: "A2" } }],
+  );
+  assert.deepEqual(rows[0], { plant: "P1", total: 2, active: 1, maintenance: 0, missing: 1, openRequests: 1 });
+  assert.deepEqual(rows[1], { plant: "Unassigned", total: 1, active: 0, maintenance: 1, missing: 0, openRequests: 0 });
+});
