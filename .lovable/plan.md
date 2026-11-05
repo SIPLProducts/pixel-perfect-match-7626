@@ -1,6 +1,16 @@
 # Direct QR label printing — TVS LP 443 Gold via QZ Tray
 
-Investigation and plan only. No code changes until approved.
+Investigation and plan only. No code, deployment or workstation changes until this final plan is reviewed and approved.
+
+## 0. Confirmed rules (from review)
+
+1. **Resolution:** TVS-E and reseller listings say 300 DPI (12 dots/mm). The TVS LP 443 Gold might ship in more than one version, so the build hard-codes neither 203 nor 300. The value is read from the installed driver (QZ `printers.details`) and confirmed against the real printer's self-test or config page before sign-off.
+2. **Honest status:** a Windows queue existing does not mean the printer is connected. If the driver reports no physical status, the badge says exactly "Queue found — status not reported by driver". It never says Ready.
+3. **Unknown status:** printing stays available, with a visible warning, only when the queue exists. The badge is amber, not green, and the message never says the hardware is confirmed ready. Offline, error or paper-out, when reported, turns printing off.
+4. **Signing:** the QZ private key lives only in server secrets (Lovable Cloud and the HBL server's PM2 environment). It is never bundled, served, logged or returned. The signing server function needs a valid session and an active workspace membership whose role already allows QR label output. Anyone else gets a refusal. It returns only the signature.
+5. **Unchanged:** A4 PDF, PNG, browser print, QR generation and tokens, scanning, and the print-history ledger. Direct print only adds one more "print" entry through the existing ledger.
+6. **No TSPL or other undocumented protocols.** Printing goes only through the Windows driver with a PDF, unless official TVS documentation establishes another supported method. Any other method would need a separate, reviewed assessment.
+7. **Label size is configurable.** The existing presets (50x30, 70x40, 100x60 mm) stay. The direct-print page size follows whichever size the user picks. No roll size is assumed. Driver stock size must match the chosen size.
 
 ## 1. What exists today (verified in code)
 
@@ -29,7 +39,7 @@ Investigation and plan only. No code changes until approved.
    - "Ready"
    - "Status unknown" when the driver reports nothing.
 
-   We will **never show Ready based only on the queue existing.** Ready needs QZ to be connected, the queue to exist, and an online status event from the driver. Whether the TVS driver sends these events has to be confirmed on the real printer. If it does not, the badge will say "Queue found — status not reported by driver" and printing stays allowed, with a warning.
+   We will **never show Ready based only on the queue existing.** Ready needs QZ to be connected, the queue to exist, and an online status event from the driver. Whether the TVS driver sends these events has to be confirmed on the real printer. If it does not, the badge will say "Queue found — status not reported by driver" and printing stays allowed, with an amber warning, never as Ready.
 6. **No print dialog:** `qz.print(config, [{ type: "pixel", format: "pdf", flavor: "base64", data }])`, with page size set to the label size in mm and scaling turned off. The job goes straight to the Windows spooler.
 7. **Driver or native commands:** use the **Windows driver with the PDF** (pixel printing). This needs no TSPL and no undocumented assumptions. Raw TSPL is out of scope until TVS documentation confirms the command set. That would be a separate assessment, as would WebUSB and Web Serial.
 8. **Setup on each workstation:**
@@ -66,7 +76,7 @@ Investigation and plan only. No code changes until approved.
 
 - The TVS driver may not report status. If so, the badge says "unknown" rather than claiming Ready.
 - If the driver's stock size differs from the label, labels get cut or misaligned. Setup per size is needed.
-- Thermal printers dither at 203 DPI. The QR at 22 mm (Compact) or more is fine. Thin text below 5 pt may be faint.
+- The printed QR and small text must be checked at the confirmed resolution. Thin text below 5 pt may be faint.
 - Over plain HTTP (10.10.4.165), browsers may block secure WebSocket on mixed content. Use the QZ insecure port or enable HTTPS.
 - QZ Tray licensing: free with the confirmation popup. Silent trusted printing needs a company certificate (a QZ licence, or self-signed with `override.crt`).
 - If the private key leaks, anyone could sign print jobs. Keep it server-only and rotatable.
