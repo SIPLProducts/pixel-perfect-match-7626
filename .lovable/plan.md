@@ -10,6 +10,14 @@ Investigation and plan only. No code, deployment or workstation changes until th
 4. **Signing:** the QZ private key lives only in server secrets (Lovable Cloud and the HBL server's PM2 environment). It is never bundled, served, logged or returned. The signing server function needs a valid session and an active workspace membership whose role already allows QR label output. Anyone else gets a refusal. It returns only the signature.
 5. **Unchanged:** A4 PDF, PNG, browser print, QR generation and tokens, scanning, and the print-history ledger. Direct print only adds one more "print" entry through the existing ledger.
 6. **No TSPL or other undocumented protocols.** Printing goes only through the Windows driver with a PDF, unless official TVS documentation establishes another supported method. Any other method would need a separate, reviewed assessment.
+8. **Deployment details (checked):** in this project's code, the QR label origin is still `https://qrmyassets.siplproducts.com` (`src/lib/asset-labels.ts`, and the fallback in `src/lib/user-management.functions.ts`). The address `http://10.10.4.165:8085`, PM2 process `qrmyassets` (Nitro on 127.0.0.1:3005 behind Nginx 8085) and the `qr_q_*` backend are known only from server output your team shared in this chat. None of it is in this project, and none of it can be checked from here. Before deployment, client IT must confirm in writing the Asset360 Quality URL, the PM2 process name and its environment file, and the HTTPS plan. Nothing from the MIS application (ports, containers, Nginx, environment) is reused or touched. Secrets go only into the confirmed Asset360 process environment.
+9. **QZ certificate and licence: deployment prerequisite.** Direct print is not enabled in any environment until all of these are true:
+   - Client IT/security has approved, in writing, the QZ Tray licence or the self-signed certificate approach.
+   - They have approved who generates and holds the key pair, and how it is stored and rotated.
+   - They have approved installing QZ Tray and the certificate on named workstations.
+   - They have approved the allowed site address.
+
+   No test, demo or unapproved certificate is used. The private key is never committed, shared in chat, or placed on workstations. Until approval, the Direct print button stays hidden. Existing printing is unaffected.
 7. **Label size is configurable.** The existing presets (50x30, 70x40, 100x60 mm) stay. The direct-print page size follows whichever size the user picks. No roll size is assumed. Driver stock size must match the chosen size.
 
 ## 1. What exists today (verified in code)
