@@ -75,6 +75,7 @@ export const permissionModules: { id: string; label: string; view: (r: string) =
   { id: "service", label: "Service requests", view: all, edit: all },
   { id: "qrmycar", label: "QRmyCAR", view: all, edit: all },
   { id: "reports", label: "Reports", view: all, edit: null },
+  { id: "audit", label: "Audit trail", view: all, edit: null },
   { id: "users", label: "Users & Access", view: (r) => userAdminRoles.has(r), edit: (r) => userAdminRoles.has(r) },
 ];
 
@@ -84,9 +85,16 @@ export const accessFor = (role: string, moduleId: string): Access => {
   return { view: m.view(role), edit: m.edit ? m.edit(role) : null };
 };
 
+/** Modules every active workspace member can edit (no role check in the server functions). */
+export const operationalModuleIds = new Set(["assets", "qr", "excel", "service", "qrmycar"]);
+export const editableModuleCount = permissionModules.filter((m) => m.edit).length;
+
+/** Counts derived from the same matrix rows the Permission matrix renders. */
 export function roleSummary(role: string) {
-  const edits = permissionModules.filter((m) => m.edit && m.edit(role)).map((m) => m.label);
-  return { editCount: edits.length, edits };
+  const views = permissionModules.filter((m) => m.view(role));
+  const edits = permissionModules.filter((m) => m.edit && m.edit(role));
+  const restricted = edits.filter((m) => !operationalModuleIds.has(m.id)).map((m) => m.label);
+  return { viewCount: views.length, editCount: edits.length, edits: edits.map((m) => m.label), restricted };
 }
 
 export type UserStatus = "active" | "invited" | "deactivated";

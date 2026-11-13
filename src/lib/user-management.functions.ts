@@ -6,7 +6,6 @@ import type { Database } from "@/integrations/supabase/types";
 import { assignableRoles, canManageTarget, canManageUsers, changeBlocker, inviteSchema, resendSchema, setActiveSchema, updateUserSchema } from "@/lib/user-management";
 
 type Client = SupabaseClient<Database>;
-const BAN = "876000h";
 
 async function callerAdmin(supabase: Client, userId: string) {
   const { data, error } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).eq("active", true).limit(1).maybeSingle();
@@ -30,7 +29,8 @@ export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const me = await callerAdmin(context.supabase, context.userId);
-    return { users: await workspaceUsers(context.supabase), callerRole: me.role, callerId: context.userId, assignable: assignableRoles(me.role) };
+    const { data: org } = await context.supabase.from("organizations").select("name").eq("id", me.organization_id).maybeSingle();
+    return { users: await workspaceUsers(context.supabase), callerRole: me.role, callerId: context.userId, assignable: assignableRoles(me.role), workspaceName: org?.name ?? "Current workspace" };
   });
 
 export const inviteUser = createServerFn({ method: "POST" })
@@ -113,7 +113,11 @@ export const setUserActive = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("user_roles").update({ active: data.active }).eq("user_id", data.userId).eq("organization_id", me.organization_id);
     if (error) throw new Error("The status could not be saved. Please retry.");
-    const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: data.active ? "none" : BAN });
-    if (banError) console.error("ban update failed", banError);
+    // Deactivation is workspace-scoped (membership only): an account-wide sign-in ban would also
+    // block other workspaces. On reactivation, clear any ban left by earlier versions.
+    if (data.active) {
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "none" });
+      if (banError) console.error("unban failed", banError);
+    }
     return { ok: true };
   });
