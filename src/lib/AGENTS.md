@@ -1,0 +1,2 @@
+- Create User never modifies existing accounts (used emails are rejected); on failure it deletes only rows for the newly created user ID, then that account. Extra details go in profiles.preferences.user_details with workspace-validated plant/department IDs.
+- First-login changes use server-only app_metadata.must_change_password (not user-editable); protected server functions use requireAppAuth (src/lib/app-auth.ts) to refuse flagged accounts.
