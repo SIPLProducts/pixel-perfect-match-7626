@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAppAuth } from "@/lib/app-auth";
 import type { Database } from "@/integrations/supabase/types";
 import { canManageCategories, categoryConflict, parentBlocker, categorySchema, deleteCategorySchema, updateCategorySchema } from "@/lib/category-schema";
 import { setCategoryTemplateSchema } from "@/lib/asset-templates";
@@ -33,7 +33,7 @@ function friendly(error: { code?: string; message: string }): Error {
 }
 
 export const createCategory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => categorySchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
@@ -46,7 +46,7 @@ export const createCategory = createServerFn({ method: "POST" })
   });
 
 export const updateCategory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => updateCategorySchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
@@ -60,7 +60,7 @@ export const updateCategory = createServerFn({ method: "POST" })
   });
 
 export const deleteCategory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => deleteCategorySchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
@@ -77,7 +77,7 @@ export const deleteCategory = createServerFn({ method: "POST" })
   });
 
 export const setCategoryTemplate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => setCategoryTemplateSchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);

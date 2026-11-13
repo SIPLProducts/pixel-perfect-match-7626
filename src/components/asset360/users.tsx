@@ -1,20 +1,23 @@
-import { Fragment, useMemo, useState, type FormEvent } from "react";
+import { Fragment, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, Check, Eye, Lock, LoaderCircle, Mail, Pencil, Plus, Power, Search, ShieldCheck, UserPlus, Users as UsersIcon, X, Minus } from "lucide-react";
+import { Building2, Check, Eye, EyeOff, Lock, LoaderCircle, Mail, Pencil, Plus, Power, Search, ShieldCheck, UserPlus, Users as UsersIcon, X, Minus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { accessFor, appRoles, canManageTarget, editableModuleCount, inviteSchema, permissionModules, roleInfo, roleSummary, userStatus, type AppRole } from "@/lib/user-management";
-import { inviteUser, listUsers, resendInvite, setUserActive, updateUser } from "@/lib/user-management.functions";
+import { accessFor, appRoles, canManageTarget, editableModuleCount, createUserSchema, PASSWORD_MAX, permissionModules, roleInfo, roleSummary, userStatus, type AppRole } from "@/lib/user-management";
+import { createUser, listUsers, resendInvite, setUserActive, updateUser } from "@/lib/user-management.functions";
 
+type Option = { id: string; code: string; name: string };
 type User = { user_id: string; email: string; full_name: string; role: AppRole; active: boolean; invited: boolean; last_sign_in_at: string | null; created_at: string };
 const statusLabel = { active: "Active", invited: "Invited", deactivated: "Deactivated" } as const;
 const statusVariant = { active: "border-success/30 bg-success/10 text-success", invited: "border-warning/30 bg-warning/10 text-warning", deactivated: "border-destructive/30 bg-destructive/10 text-destructive" } as const;
@@ -39,14 +42,14 @@ export function UsersAccess() {
     </div>
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList><TabsTrigger value="users">Users</TabsTrigger><TabsTrigger value="roles">Roles</TabsTrigger><TabsTrigger value="matrix">Permission matrix</TabsTrigger></TabsList>
-      <TabsContent value="users" className="mt-4"><UsersTab users={users} callerId={query.data!.callerId} callerRole={query.data!.callerRole} assignable={query.data!.assignable as AppRole[]} workspace={query.data!.workspaceName}/></TabsContent>
+      <TabsContent value="users" className="mt-4"><UsersTab users={users} callerId={query.data!.callerId} callerRole={query.data!.callerRole} assignable={query.data!.assignable as AppRole[]} workspace={query.data!.workspaceName} plants={query.data!.plants} departments={query.data!.departments}/></TabsContent>
       <TabsContent value="roles" className="mt-4"><RolesTab users={users} onView={(r) => { setFocusRole(r); setTab("matrix"); }}/></TabsContent>
       <TabsContent value="matrix" className="mt-4"><MatrixTab focusRole={focusRole}/></TabsContent>
     </Tabs>
   </div>;
 }
 
-function UsersTab({ users, callerId, callerRole, assignable, workspace }: { users: User[]; callerId: string; callerRole: string; assignable: AppRole[]; workspace: string }) {
+function UsersTab({ users, callerId, callerRole, assignable, workspace, plants, departments }: { users: User[]; callerId: string; callerRole: string; assignable: AppRole[]; workspace: string; plants: Option[]; departments: Option[] }) {
   const [search, setSearch] = useState(""); const [role, setRole] = useState("all"); const [status, setStatus] = useState("all");
   const [editing, setEditing] = useState<User | "new" | null>(null); const [toggling, setToggling] = useState<User | null>(null);
   const qc = useQueryClient(); const setActiveFn = useServerFn(setUserActive); const resendFn = useServerFn(resendInvite);
@@ -78,24 +81,27 @@ function UsersTab({ users, callerId, callerRole, assignable, workspace }: { user
             <Button size="sm" variant="ghost" disabled={self || !manageable} title={self ? "You cannot change your own status" : undefined} onClick={() => setToggling(u)}><Power/>{u.active ? "Deactivate" : "Activate"}</Button>
           </div></td></tr>; })}</tbody>
     </table></div>
-    {editing && <UserDialog user={editing === "new" ? null : editing} self={editing !== "new" && editing.user_id === callerId} assignable={assignable} workspace={workspace} onClose={() => setEditing(null)}/>}
+    {editing === "new" && <CreateUserDialog assignable={assignable} workspace={workspace} plants={plants} departments={departments} onClose={() => setEditing(null)}/>}
+    {editing && editing !== "new" && <UserDialog user={editing} self={editing.user_id === callerId} assignable={assignable} workspace={workspace} onClose={() => setEditing(null)}/>}
     <AlertDialog open={!!toggling} onOpenChange={o => !o && setToggling(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{toggling?.active ? "Deactivate" : "Reactivate"} {toggling?.full_name || toggling?.email}?</AlertDialogTitle><AlertDialogDescription>{toggling?.active ? "They lose access to this workspace. Membership in any other workspace is not affected, and their history stays." : "They can sign in again with their current role."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction disabled={toggle.isPending} onClick={e => { e.preventDefault(); if (toggling) toggle.mutate(toggling); }}>{toggle.isPending && <LoaderCircle className="animate-spin"/>}{toggling?.active ? "Deactivate" : "Reactivate"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </div>;
 }
 
+const editSchema = z.object({ fullName: z.string().trim().min(2, "Enter the full name").max(100) });
+
 function UserDialog({ user, self, assignable, workspace, onClose }: { user: User | null; self: boolean; assignable: AppRole[]; workspace: string; onClose: () => void }) {
   const [fullName, setFullName] = useState(user?.full_name ?? ""); const [email, setEmail] = useState(""); const [role, setRole] = useState<AppRole>(user?.role ?? "client_tester");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const qc = useQueryClient(); const inviteFn = useServerFn(inviteUser); const updateFn = useServerFn(updateUser);
+  const qc = useQueryClient(); const updateFn = useServerFn(updateUser);
   const roles = user && !assignable.includes(user.role) ? [user.role, ...assignable] : assignable;
   const save = useMutation({
-    mutationFn: async () => user ? updateFn({ data: { userId: user.user_id, fullName, role } }) : inviteFn({ data: { fullName, email, role } }),
+    mutationFn: async () => updateFn({ data: { userId: user!.user_id, fullName, role } }),
     onSuccess: () => { toast.success(user ? "User updated" : `Invitation sent to ${email.trim()}`); void qc.invalidateQueries({ queryKey: ["workspace-users"] }); onClose(); },
     onError: (e) => toast.error(e.message),
   });
   function submit(e: FormEvent) {
     e.preventDefault();
-    const parsed = inviteSchema.safeParse({ fullName, email: user ? user.email : email, role });
+    const parsed = editSchema.safeParse({ fullName });
     if (!parsed.success) { setErrors(Object.fromEntries(parsed.error.issues.map(i => [String(i.path[0]), i.message]))); return; }
     setErrors({}); save.mutate();
   }
@@ -109,6 +115,43 @@ function UserDialog({ user, self, assignable, workspace, onClose }: { user: User
       {!user && <p className="rounded-md bg-primary/5 p-3 text-xs text-muted-foreground">No password is set here. The user gets a secure email link to create their own password.</p>}
     </fieldset>
     <DialogFooter><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={save.isPending}>{save.isPending && <LoaderCircle className="animate-spin"/>}{user ? "Save changes" : "Create user"}</Button></DialogFooter>
+  </form></DialogContent></Dialog>;
+}
+
+const emptyCreate = { firstName: "", lastName: "", username: "", email: "", contact: "", info1: "", plantId: "", departmentId: "", profitCentre: "", purchaseGroup: "", distributionChannel: "", status: "active", role: "", password: "", confirmPassword: "" };
+
+function CreateUserDialog({ assignable, workspace, plants, departments, onClose }: { assignable: AppRole[]; workspace: string; plants: Option[]; departments: Option[]; onClose: () => void }) {
+  const [form, setForm] = useState({ ...emptyCreate, role: assignable.includes("client_tester") ? "client_tester" : assignable[0] ?? "" });
+  const [force, setForce] = useState(true); const [show, setShow] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const qc = useQueryClient(); const createFn = useServerFn(createUser);
+  const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const payload = () => ({ ...form, plantId: form.plantId || null, departmentId: form.departmentId || null, forcePasswordChange: force });
+  const save = useMutation({
+    mutationFn: async () => createFn({ data: payload() as never }),
+    onSuccess: () => { toast.success(`User ${form.email.trim()} created`); void qc.invalidateQueries({ queryKey: ["workspace-users"] }); onClose(); },
+    onError: (e) => toast.error(e.message),
+  });
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    const parsed = createUserSchema.safeParse(payload());
+    if (!parsed.success) { setErrors(Object.fromEntries(parsed.error.issues.map(i => [String(i.path[0]), i.message]))); return; }
+    setErrors({}); save.mutate();
+  }
+  const err = (k: string) => errors[k] && <p className="mt-1 text-xs text-destructive">{errors[k]}</p>;
+  const text = (k: keyof typeof form, label: string, max: number, opts: { required?: boolean; type?: string; auto?: string } = {}) => <div><Label htmlFor={`cu-${k}`}>{label}{opts.required && " *"}</Label><Input id={`cu-${k}`} className="mt-1.5" type={opts.type ?? "text"} value={form[k]} maxLength={max} autoComplete={opts.auto ?? "off"} aria-invalid={!!errors[k]} onChange={e => set(k, e.target.value)}/>{err(k)}</div>;
+  const pick = (k: "plantId" | "departmentId", label: string, items: Option[]) => <div><Label>{label}</Label><Select value={form[k] || "none"} onValueChange={v => set(k, v === "none" ? "" : v)}><SelectTrigger className="mt-1.5" aria-label={label}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Not assigned</SelectItem>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.code} · {i.name}</SelectItem>)}</SelectContent></Select>{err(k)}</div>;
+  const pw = (k: "password" | "confirmPassword", label: string) => <div><Label htmlFor={`cu-${k}`}>{label} *</Label><div className="relative mt-1.5"><Input id={`cu-${k}`} className="pr-11" type={show ? "text" : "password"} value={form[k]} maxLength={PASSWORD_MAX} autoComplete="new-password" aria-invalid={!!errors[k]} onChange={e => set(k, e.target.value)}/><Button type="button" size="icon" variant="ghost" className="absolute right-0.5 top-0.5 size-8" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"}>{show ? <EyeOff/> : <Eye/>}</Button></div>{err(k)}</div>;
+  const section = (title: string, body: ReactNode) => <section className="space-y-4 border-t pt-5 first:border-t-0 first:pt-0"><h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3><div className="grid gap-4 sm:grid-cols-2">{body}</div></section>;
+  return <Dialog open onOpenChange={o => !o && onClose()}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><form onSubmit={submit} noValidate>
+    <DialogHeader><DialogTitle>Create user</DialogTitle><DialogDescription>Joins <span className="font-medium text-foreground">{workspace}</span>. Fields marked * are required.</DialogDescription></DialogHeader>
+    <fieldset disabled={save.isPending} className="my-5 space-y-5">
+      {section("Basic information", <>{text("firstName", "First name", 50, { required: true })}{text("lastName", "Last name", 50)}{text("username", "Username", 30)}{text("email", "Email", 255, { required: true, type: "email" })}{text("contact", "Contact", 20, { type: "tel" })}{text("info1", "Info 1", 255)}</>)}
+      {section("Contact & organisation", <>{pick("plantId", "Plant", plants)}{text("profitCentre", "Profit centre", 50)}{pick("departmentId", "Department", departments)}{text("purchaseGroup", "Purchase group", 50)}{text("distributionChannel", "Distribution channel", 50)}<div><Label>Status *</Label><Select value={form.status} onValueChange={v => set("status", v)}><SelectTrigger className="mt-1.5" aria-label="Status"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select></div></>)}
+      {section("Access", <><div className="sm:col-span-2"><Label>Role *</Label><Select value={form.role} onValueChange={v => set("role", v)}><SelectTrigger className="mt-1.5" aria-label="Role"><SelectValue placeholder="Select role"/></SelectTrigger><SelectContent>{assignable.map(r => <SelectItem key={r} value={r}>{roleInfo[r].label}</SelectItem>)}</SelectContent></Select>{err("role")}</div>{pw("password", "Password")}{pw("confirmPassword", "Confirm password")}<label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox checked={force} onCheckedChange={v => setForce(v === true)}/>Require a password change at first sign-in</label></>)}
+      <p className="rounded-md bg-primary/5 p-3 text-xs text-muted-foreground">Share the initial password privately. It is never stored or shown in Asset360. Existing accounts can't be created again.</p>
+    </fieldset>
+    <DialogFooter><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={save.isPending}>{save.isPending && <LoaderCircle className="animate-spin"/>}Create user</Button></DialogFooter>
   </form></DialogContent></Dialog>;
 }
 

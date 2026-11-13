@@ -99,3 +99,40 @@ export function roleSummary(role: string) {
 
 export type UserStatus = "active" | "invited" | "deactivated";
 export const userStatus = (u: { active: boolean; invited: boolean }): UserStatus => (!u.active ? "deactivated" : u.invited ? "invited" : "active");
+
+/** Server-only flag (Auth app_metadata) set when an administrator chose the initial password. */
+export const PASSWORD_CHANGE_REQUIRED = "PASSWORD_CHANGE_REQUIRED";
+export function mustChangePassword(claims: unknown): boolean {
+  const meta = (claims as { app_metadata?: Record<string, unknown> } | null | undefined)?.app_metadata;
+  return meta?.["must_change_password"] === true;
+}
+
+/** Supabase Auth hashes passwords with bcrypt, which only uses the first 72 bytes. */
+export const PASSWORD_MIN = 8;
+export const PASSWORD_MAX = 72;
+export const passwordSchema = z.string().min(PASSWORD_MIN, `Password must be at least ${PASSWORD_MIN} characters`).max(PASSWORD_MAX, `Password cannot exceed ${PASSWORD_MAX} characters`)
+  .refine((v) => new TextEncoder().encode(v).length <= PASSWORD_MAX, `Password cannot exceed ${PASSWORD_MAX} bytes`);
+export const usernameSchema = z.string().trim().max(30).refine((v) => v === "" || /^[A-Za-z0-9_.]{3,30}$/.test(v), "Username must be 3–30 letters, numbers, underscores (_) or periods (.)");
+const optionalText = (max: number) => z.string().trim().max(max, `Use at most ${max} characters`).default("");
+
+export const createUserSchema = z.object({
+  firstName: z.string().trim().min(1, "Enter the first name").max(50, "Use at most 50 characters"),
+  lastName: optionalText(50),
+  username: usernameSchema.default(""),
+  email: z.string().trim().toLowerCase().email("Enter a valid email").max(255),
+  contact: z.string().trim().max(20).refine((v) => v === "" || /^\+?[0-9 ()-]{7,20}$/.test(v), "Enter a valid contact number").default(""),
+  info1: optionalText(255),
+  plantId: z.string().uuid().nullable().default(null),
+  departmentId: z.string().uuid().nullable().default(null),
+  profitCentre: optionalText(50),
+  purchaseGroup: optionalText(50),
+  distributionChannel: optionalText(50),
+  status: z.enum(["active", "inactive"]),
+  role: z.enum(appRoles),
+  password: passwordSchema,
+  confirmPassword: z.string(),
+  forcePasswordChange: z.boolean().default(true),
+}).refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
+export type CreateUserInput = z.input<typeof createUserSchema>;
+export const firstLoginPasswordSchema = z.object({ password: passwordSchema });
+export const fullNameOf = (v: { firstName: string; lastName: string }) => [v.firstName, v.lastName].filter(Boolean).join(" ");

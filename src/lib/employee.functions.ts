@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAppAuth } from "@/lib/app-auth";
 import type { Database } from "@/integrations/supabase/types";
 import { canManageEmployees, employeeCodeConflict, employeeDeactivationBlocker, employeeSchema, employeeStatusSchema, updateEmployeeSchema, wouldCreateManagerLoop } from "@/lib/employee-schema";
 
@@ -52,7 +52,7 @@ function friendly(error: { code?: string }) {
 const columns = (v: Values) => ({ employee_code: v.code, full_name: v.fullName, email: v.email, mobile: v.mobile, designation: v.designation, department_id: v.departmentId, location_id: v.locationId, manager_id: v.managerId, status: v.status });
 
 export const createEmployee = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => employeeSchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
@@ -63,7 +63,7 @@ export const createEmployee = createServerFn({ method: "POST" })
   });
 
 export const updateEmployee = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => updateEmployeeSchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
@@ -80,7 +80,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
   });
 
 export const setEmployeeStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => employeeStatusSchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);

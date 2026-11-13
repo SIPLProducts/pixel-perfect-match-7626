@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAppAuth } from "@/lib/app-auth";
 import { documentInputSchema, validateDocumentFile, documentSignatureMatches } from "./asset-document-schema";
 
 export const uploadAssetDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input: FormData) => {
     if (!(input instanceof FormData)) throw new Error("Invalid attachment");
     return input;
@@ -31,7 +31,7 @@ export const uploadAssetDocument = createServerFn({ method: "POST" })
   });
 
 export const downloadAssetDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input: { id: string }) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: document, error } = await context.supabase.from("asset_attachments").select("storage_path,file_name").eq("id", data.id).single();

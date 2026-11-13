@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAppAuth } from "@/lib/app-auth";
 import type { Database } from "@/integrations/supabase/types";
 
 import { assetSchema, updateAssetSchema, assetValues } from "@/lib/asset-form-schema";
@@ -26,7 +26,7 @@ async function getMembership(supabase: SupabaseClient<Database>, userId: string)
 }
 
 export const bootstrapWorkspace = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => z.object({ fullName: z.string().trim().min(2).max(100) }).parse(input))
   .handler(async ({ data, context }) => {
     // Never auto-create a workspace for anyone who already has a membership, even a deactivated one.
@@ -98,7 +98,7 @@ export const bootstrapWorkspace = createServerFn({ method: "POST" })
   });
 
 export const getWorkspaceData = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .handler(async ({ context }) => {
     const memberships = await getMemberships(context.supabase, context.userId);
     const membership = memberships.find((m) => m.active) ?? null;
@@ -145,7 +145,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
   });
 
 export const recordQrPrints = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => qrPrintSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { data: count, error } = await context.supabase.rpc("record_asset_qr_prints", {
@@ -168,7 +168,7 @@ async function validateAssetReferences(supabase: SupabaseClient<Database>, organ
 }
 
 export const createAsset = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => assetSchema.parse(input))
   .handler(async ({ data, context }) => {
     const membership = await getMembership(context.supabase, context.userId);
@@ -186,7 +186,7 @@ export const createAsset = createServerFn({ method: "POST" })
   });
 
 export const importAssets = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => importAssetsSchema.parse(input))
   .handler(async ({ data, context }) => {
     const membership = await getMembership(context.supabase, context.userId);
@@ -200,7 +200,7 @@ export const importAssets = createServerFn({ method: "POST" })
   });
 
 export const updateAsset = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => updateAssetSchema.parse(input))
   .handler(async ({ data, context }) => {
     const membership = await getMembership(context.supabase, context.userId);
@@ -215,7 +215,7 @@ export const updateAsset = createServerFn({ method: "POST" })
   });
 
 export const createTransfer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => transferSchema.parse(input))
   .handler(async ({ data, context }) => {
     const membership = await getMembership(context.supabase, context.userId);
@@ -254,7 +254,7 @@ export const createTransfer = createServerFn({ method: "POST" })
   });
 
 export const updateTransfer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator(input => editTransferSchema.parse(input))
   .handler(async ({ data, context }) => {
     const membership = await getMembership(context.supabase, context.userId);
@@ -271,7 +271,7 @@ export const updateTransfer = createServerFn({ method: "POST" })
   });
 
 export const processTransfer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => z.object({ transferId: z.string().uuid(), action: z.enum(["approve", "reject", "complete"]) }).parse(input))
   .handler(async ({ data, context }) => {
     const membership = await getMembership(context.supabase, context.userId);

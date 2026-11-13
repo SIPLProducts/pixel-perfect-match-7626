@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAppAuth } from "@/lib/app-auth";
 import type { Database } from "@/integrations/supabase/types";
 import { canManageLocations, deactivationBlocker, locationConflict, locationSchema, locationStatusSchema, updateLocationSchema, wouldCreateCycle } from "@/lib/location-schema";
 import { z } from "zod";
@@ -44,7 +44,7 @@ async function assertCanDeactivate(supabase: Client, organizationId: string, loc
 }
 
 export const createLocation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => locationSchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
@@ -57,7 +57,7 @@ export const createLocation = createServerFn({ method: "POST" })
   });
 
 export const updateLocation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => updateLocationSchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);
@@ -75,7 +75,7 @@ export const updateLocation = createServerFn({ method: "POST" })
   });
 
 export const setLocationStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator((input) => locationStatusSchema.parse(input))
   .handler(async ({ data, context }) => {
     const organizationId = await managerOrg(context.supabase, context.userId);

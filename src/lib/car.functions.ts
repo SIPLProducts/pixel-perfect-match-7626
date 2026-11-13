@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAppAuth } from "@/lib/app-auth";
 import type { Database } from "@/integrations/supabase/types";
 import { carSchema, carValues, carMessageSchema } from "./car-schema";
 import { carPublicProfile } from "./car-public-profile";
-export const saveCar = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+export const saveCar = createServerFn({ method: "POST" }).middleware([requireAppAuth])
  .inputValidator(input => z.object({ car: carSchema, id: z.string().uuid().optional(), expectedUpdatedAt: z.string().datetime({ offset: true }).optional() }).parse(input))
  .handler(async ({ data, context }) => {
  const { data: member, error: membershipError } = await context.supabase.from("user_roles").select("organization_id").eq("user_id", context.userId).eq("active", true).limit(1).maybeSingle();
@@ -32,6 +32,6 @@ export const getPublicCar = createServerFn({ method: "GET" }).inputValidator(inp
 export const submitCarMessage = createServerFn({ method: "POST" }).inputValidator(input => carMessageSchema.parse(input)).handler(async ({ data }) => {
  const { data: id, error } = await publicClient().rpc("submit_car_message", { _token: data.token, _reason: data.reason, _message: data.message }); if (error) throw new Error("Message could not be submitted. The label may be inactive."); return { id };
 });
-export const acknowledgeCarMessage = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator(input => z.object({ id: z.string().uuid() }).parse(input)).handler(async ({ data, context }) => {
+export const acknowledgeCarMessage = createServerFn({ method: "POST" }).middleware([requireAppAuth]).inputValidator(input => z.object({ id: z.string().uuid() }).parse(input)).handler(async ({ data, context }) => {
  const { data: message, error } = await context.supabase.from("car_messages").update({ status: "acknowledged" }).eq("id", data.id).select("id").maybeSingle(); if (error || !message) throw new Error("Message unavailable in your workspace"); return message;
 });

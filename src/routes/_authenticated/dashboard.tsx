@@ -1,10 +1,12 @@
-import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
+import { redirect, createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
 import { Workspace } from "@/components/asset360/workspace";
 import { workspaceQueryOptions } from "@/lib/workspace-query";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  // Administrator-set initial passwords must be replaced before the app opens (server enforces it too).
+  beforeLoad: ({ context }) => { if (context.user.app_metadata?.["must_change_password"] === true) throw redirect({ to: "/reset-password" }); },
   loader: async ({ context }) => { await context.queryClient.ensureQueryData(workspaceQueryOptions(context.user.id)); },
   pendingComponent: () => <main className="grid min-h-screen place-items-center bg-background text-muted-foreground">Preparing your workspace…</main>,
   errorComponent: WorkspaceError,

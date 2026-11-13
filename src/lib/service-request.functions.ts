@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAppAuth } from "@/lib/app-auth";
 import { serviceRequestSchema, serviceRequestValues } from "./service-request-schema";
 
 export const updateServiceRequest = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAppAuth])
   .inputValidator(input => serviceRequestSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { data: membership, error: membershipError } = await context.supabase.from("user_roles")

@@ -69,3 +69,43 @@ test("deactivation never applies an account-wide sign-in ban", () => {
   const src = readFileSync("src/lib/user-management.functions.ts", "utf8");
   assert.ok(!/ban_duration:\s*(data\.active\s*\?|BAN|"8)/.test(src));
 });
+
+import { createUserSchema, mustChangePassword, usernameSchema, PASSWORD_MAX } from "./user-management";
+const validUser = { firstName: "Ravi", email: "Ravi@Example.com", status: "active", role: "employee", password: "Secret123", confirmPassword: "Secret123" };
+test("create user requires first name, email, status, role and matching 8-72 char password", () => {
+  assert.ok(createUserSchema.safeParse(validUser).success);
+  assert.equal(createUserSchema.parse(validUser).email, "ravi@example.com");
+  for (const k of ["firstName", "email", "status", "role", "password"]) assert.ok(!createUserSchema.safeParse({ ...validUser, [k]: undefined }).success, k);
+  assert.ok(!createUserSchema.safeParse({ ...validUser, password: "short7!", confirmPassword: "short7!" }).success);
+  const long = "a".repeat(PASSWORD_MAX + 1);
+  assert.ok(!createUserSchema.safeParse({ ...validUser, password: long, confirmPassword: long }).success);
+  assert.ok(!createUserSchema.safeParse({ ...validUser, confirmPassword: "Different1" }).success);
+});
+test("username is optional, otherwise 3-30 letters, digits, _ or .", () => {
+  for (const ok of ["", "abc", "ravi.k_01", "a".repeat(30)]) assert.ok(usernameSchema.safeParse(ok).success, ok);
+  for (const bad of ["ab", "a".repeat(31), "ravi-k", "ravi k", "ravi@x"]) assert.ok(!usernameSchema.safeParse(bad).success, bad);
+});
+test("plant and department must be ids when given", () => {
+  assert.ok(!createUserSchema.safeParse({ ...validUser, plantId: "HYD" }).success);
+});
+test("only the server-controlled app_metadata flag forces a password change", () => {
+  assert.equal(mustChangePassword({ app_metadata: { must_change_password: true } }), true);
+  assert.equal(mustChangePassword({ user_metadata: { must_change_password: true } }), false);
+  assert.equal(mustChangePassword({ app_metadata: {} }), false);
+  assert.equal(mustChangePassword(undefined), false);
+});
+test("every protected server function uses the first-login enforcing middleware", () => {
+  for (const f of ["asset360", "asset-documents", "car", "category", "employee", "location", "service-request", "user-management"]) {
+    const src = readFileSync(new URL(`./${f}.functions.ts`, import.meta.url), "utf8");
+    const plain = src.match(/\.middleware\(\[requireSupabaseAuth\]\)/g)?.length ?? 0;
+    assert.equal(plain, f === "user-management" ? 2 : 0, f);
+  }
+});
+test("user creation never overwrites existing accounts and cleans up only the new id", () => {
+  const src = readFileSync(new URL("./user-management.functions.ts", import.meta.url), "utf8");
+  const body = src.slice(src.indexOf("export const createUser"), src.indexOf("export const passwordChangeStatus"));
+  assert.ok(!/updateUserById|upsert/.test(body));
+  assert.equal(body.match(/deleteUser\(/g)?.length, 1);
+  assert.ok(body.includes('deleteUser(newId)'));
+  assert.ok(!/console\.\w+\([^)]*password/i.test(body));
+});
