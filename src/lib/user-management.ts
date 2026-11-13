@@ -73,7 +73,6 @@ export const permissionModules: { id: string; label: string; view: (r: string) =
   { id: "templates", label: "Excel template links", view: all, edit: (r) => templateRoles.has(r) },
   { id: "transfers", label: "Transfers (create, edit, approve)", view: all, edit: (r) => (transferRoles as readonly string[]).includes(r) },
   { id: "service", label: "Service requests", view: all, edit: all },
-  { id: "qrmycar", label: "QRmyCAR", view: all, edit: all },
   { id: "reports", label: "Reports", view: all, edit: null },
   { id: "audit", label: "Audit trail", view: all, edit: null },
   { id: "users", label: "Users & Access", view: (r) => userAdminRoles.has(r), edit: (r) => userAdminRoles.has(r) },
@@ -86,7 +85,7 @@ export const accessFor = (role: string, moduleId: string): Access => {
 };
 
 /** Modules every active workspace member can edit (no role check in the server functions). */
-export const operationalModuleIds = new Set(["assets", "qr", "excel", "service", "qrmycar"]);
+export const operationalModuleIds = new Set(["assets", "qr", "excel", "service"]);
 export const editableModuleCount = permissionModules.filter((m) => m.edit).length;
 
 /** Counts derived from the same matrix rows the Permission matrix renders. */

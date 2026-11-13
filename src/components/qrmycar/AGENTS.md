@@ -1,5 +1,0 @@
-- Keep car registers tenant-private; active token-scoped public car reads explicitly project vehicle and owner-name fields only, and direct-number RPC execution stays revoked to prevent disclosure.
-- QRmyCAR uses its own protected content route and the shared workspace cache and subscriptions; public reports use Sharvi-mediated messaging without direct owner phone links or visitor-number collection.
-- QRmyCAR contact reasons share validation between public forms and tenant inbox filters; optional consent-based coordinates travel inside the saved message with validated map links, preserving existing public token identities.
-- Scope the public car contact theme to its page and reuse persistent token contact actions and message validation; presentation changes must not imply an unconnected notification was delivered.
-- Render car sticker previews, PDFs and print output from one client-side label renderer with shared validated settings and millimeter layout calculations, so selected dimensions and scaling match physical output without changing persistent QR identities.

@@ -48,15 +48,15 @@ test("template-link roles match the database rule", () => {
   const roles = [...(sql.match(/r\.role IN \(([^)]*)\)/)?.[1] ?? "").matchAll(/'(\w+)'/g)].map((m) => m[1]);
   assert.deepEqual(new Set(roles), templateRoles);
 });
-test("role card counts match the 14-module matrix", () => {
-  const expected: Record<string, [number, number]> = { super_admin: [14, 11], admin: [14, 11], asset_manager: [13, 10], facility_manager: [13, 8], it_manager: [13, 6], finance: [13, 5], auditor: [13, 5], employee: [13, 5], viewer: [13, 5], client_tester: [13, 5] };
+test("role card counts match the 13-module matrix", () => {
+  const expected: Record<string, [number, number]> = { super_admin: [13, 10], admin: [13, 10], asset_manager: [12, 9], facility_manager: [12, 7], it_manager: [12, 5], finance: [12, 4], auditor: [12, 4], employee: [12, 4], viewer: [12, 4], client_tester: [12, 4] };
   for (const [role, [v, e]] of Object.entries(expected)) {
     const s = roleSummary(role);
     assert.deepEqual([s.viewCount, s.editCount], [v, e], role);
     assert.equal(permissionModules.filter((m) => accessFor(role, m.id).view).length, v);
   }
-  assert.equal(permissionModules.length, 14);
-  assert.equal(editableModuleCount, 11);
+  assert.equal(permissionModules.length, 13);
+  assert.equal(editableModuleCount, 10);
 });
 test("audit trail is visible to every role and never editable", () => {
   for (const r of ["super_admin", "viewer", "client_tester", "auditor"]) assert.deepEqual(accessFor(r, "audit"), { view: true, edit: null });
@@ -95,7 +95,7 @@ test("only the server-controlled app_metadata flag forces a password change", ()
   assert.equal(mustChangePassword(undefined), false);
 });
 test("every protected server function uses the first-login enforcing middleware", () => {
-  for (const f of ["asset360", "asset-documents", "car", "category", "employee", "location", "service-request", "user-management"]) {
+  for (const f of ["asset360", "asset-documents", "category", "employee", "location", "service-request", "user-management"]) {
     const src = readFileSync(new URL(`./${f}.functions.ts`, import.meta.url), "utf8");
     const plain = src.match(/\.middleware\(\[requireSupabaseAuth\]\)/g)?.length ?? 0;
     assert.equal(plain, f === "user-management" ? 2 : 0, f);
