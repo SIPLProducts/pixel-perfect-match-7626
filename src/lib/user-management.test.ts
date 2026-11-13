@@ -109,3 +109,6 @@ test("user creation never overwrites existing accounts and cleans up only the ne
   assert.ok(body.includes('deleteUser(newId)'));
   assert.ok(!/console\.\w+\([^)]*password/i.test(body));
 });
+test("any 8-72 character password is accepted without complexity rules", () => {
+  for (const pw of ["simplepass", "12345678", "aaaaaaaa", "ALLUPPERCASE"]) assert.ok(createUserSchema.safeParse({ ...validUser, password: pw, confirmPassword: pw }).success, pw);
+});

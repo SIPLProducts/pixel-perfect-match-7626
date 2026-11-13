@@ -177,7 +177,7 @@ export const createUser = createServerFn({ method: "POST" })
       if (code === "email_exists" || /already (been )?registered|already exists/i.test(authError?.message ?? "")) {
         throw new Error("An account with this email already exists. Existing accounts can't be created again or have their password changed here.");
       }
-      if (code === "weak_password") throw new Error("This password is too weak. Choose a stronger password.");
+      if (code === "weak_password") throw new Error("This password appears in known data breaches and can't be used. Choose a different password (8–72 characters).");
       console.error("createUser: account creation failed", code || errMessage(authError));
       throw new Error("The account could not be created. Please retry.");
     }
