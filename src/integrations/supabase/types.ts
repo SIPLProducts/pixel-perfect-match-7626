@@ -1331,6 +1331,242 @@ export type Database = {
           },
         ]
       }
+      sap_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          changed_fields: string[]
+          created_at: string
+          entity: string
+          entity_id: string | null
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          changed_fields?: string[]
+          created_at?: string
+          entity: string
+          entity_id?: string | null
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          changed_fields?: string[]
+          created_at?: string
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sap_audit_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sap_connection_settings: {
+        Row: {
+          base_url: string
+          connection_mode: string
+          deployment_mode: string
+          environment: string
+          middleware_port: number
+          middleware_url: string
+          organization_id: string
+          technical_user: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_url?: string
+          connection_mode?: string
+          deployment_mode?: string
+          environment?: string
+          middleware_port?: number
+          middleware_url?: string
+          organization_id: string
+          technical_user?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_url?: string
+          connection_mode?: string
+          deployment_mode?: string
+          environment?: string
+          middleware_port?: number
+          middleware_url?: string
+          organization_id?: string
+          technical_user?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sap_connection_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sap_endpoints: {
+        Row: {
+          active: boolean
+          api_type: string
+          auth_type: string
+          created_at: string
+          created_by: string | null
+          credential_user: string | null
+          description: string
+          extra_headers: Json
+          id: string
+          method: string
+          module: string
+          name: string
+          organization_id: string
+          path: string
+          request_fields: Json
+          response_fields: Json
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          api_type?: string
+          auth_type?: string
+          created_at?: string
+          created_by?: string | null
+          credential_user?: string | null
+          description?: string
+          extra_headers?: Json
+          id?: string
+          method?: string
+          module?: string
+          name: string
+          organization_id: string
+          path: string
+          request_fields?: Json
+          response_fields?: Json
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          api_type?: string
+          auth_type?: string
+          created_at?: string
+          created_by?: string | null
+          credential_user?: string | null
+          description?: string
+          extra_headers?: Json
+          id?: string
+          method?: string
+          module?: string
+          name?: string
+          organization_id?: string
+          path?: string
+          request_fields?: Json
+          response_fields?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sap_endpoints_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sap_secrets: {
+        Row: {
+          organization_id: string
+          scope: string
+          secret: string
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          scope: string
+          secret: string
+          updated_at?: string
+        }
+        Update: {
+          organization_id?: string
+          scope?: string
+          secret?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sap_secrets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sap_test_logs: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          endpoint_id: string | null
+          id: string
+          latency_ms: number | null
+          message: string
+          organization_id: string
+          status: number | null
+          target: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          endpoint_id?: string | null
+          id?: string
+          latency_ms?: number | null
+          message?: string
+          organization_id: string
+          status?: number | null
+          target: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          endpoint_id?: string | null
+          id?: string
+          latency_ms?: number | null
+          message?: string
+          organization_id?: string
+          status?: number | null
+          target?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sap_test_logs_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "sap_endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sap_test_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           active: boolean
@@ -1486,6 +1722,7 @@ export type Database = {
         Args: { _organization_id: string; _rows: Json }
         Returns: number
       }
+      is_org_admin: { Args: { _organization_id: string }; Returns: boolean }
       is_org_member: { Args: { _organization_id: string }; Returns: boolean }
       list_workspace_users: {
         Args: never

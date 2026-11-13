@@ -197,6 +197,13 @@
       "when": 1792566168484,
       "tag": "0027_category_templates_active_members",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794582071912,
+      "tag": "0028_sap_api_settings",
+      "breakpoints": true
     }
   ]
 }
