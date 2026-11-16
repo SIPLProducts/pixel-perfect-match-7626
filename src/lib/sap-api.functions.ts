@@ -127,7 +127,8 @@ async function timedFetch(url: string, init: RequestInit) {
 const basic = (u: string, p: string) => `Basic ${btoa(`${u}:${p}`)}`;
 function middlewareBase(url: string, port: number) {
   const u = new URL(/^https?:\/\//i.test(url) ? url : `http://${url}`);
-  if (!u.port) u.port = String(port);
+  // https addresses (ngrok, reverse proxies) already use their standard port; only plain http hosts get the configured port.
+  if (!u.port && u.protocol === "http:") u.port = String(port);
   return u.toString().replace(/\/+$/, "");
 }
 
@@ -140,7 +141,7 @@ export const testSap = createServerFn({ method: "POST" }).middleware([requireApp
     try {
       if (data.target === "middleware") {
         if (!conn?.middleware_url) throw new Error("Middleware URL is not configured");
-        result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/health`, { headers: { "x-shared-secret": await readSecret(org, "proxy_secret") } });
+        result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/health`, { headers: { "x-shared-secret": await readSecret(org, "proxy_secret"), "ngrok-skip-browser-warning": "1" } });
       } else if (data.target === "connection") {
         if (!conn?.base_url) throw new Error("SAP Base URL is not configured");
         result = await timedFetch(conn.base_url, { method: "GET", headers: { Authorization: basic(conn.technical_user, await readSecret(org, "sap_password")) } });
@@ -157,7 +158,7 @@ export const testSap = createServerFn({ method: "POST" }).middleware([requireApp
         if (body) headers["Content-Type"] = "application/json";
         if (conn?.connection_mode === "proxy") {
           if (!conn.middleware_url) throw new Error("Middleware URL is not configured");
-          result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/sap/request`, { method: "POST", headers: { "Content-Type": "application/json", "x-shared-secret": await readSecret(org, "proxy_secret") }, body: JSON.stringify({ url, method: ep.method, headers, body }) });
+          result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/sap/request`, { method: "POST", headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1", "x-shared-secret": await readSecret(org, "proxy_secret") }, body: JSON.stringify({ url, method: ep.method, headers, body }) });
         } else result = await timedFetch(url, body ? { method: ep.method, headers, body } : { method: ep.method, headers });
       }
     } catch (e) {
