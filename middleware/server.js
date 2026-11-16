@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT || 3002);
 const SECRET = process.env.PROXY_SECRET || "";
 const ALLOWED = (process.env.ALLOWED_SAP_HOSTS || "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
 const MAX_BODY = 1024 * 1024;
-const TIMEOUT_MS = 30000;
+const TIMEOUT_MS = 90000;
 
 if (!SECRET) {
   console.error("PROXY_SECRET is not set. Refusing to start.");
@@ -33,9 +33,11 @@ function send(res, status, obj) {
 }
 
 const server = http.createServer((req, res) => {
+  if (!secretOk(req.headers["x-shared-secret"])) { console.warn(`[auth] rejected ${req.method} ${req.url}`); }
   if (!secretOk(req.headers["x-shared-secret"])) return send(res, 401, { ok: false, message: "Unauthorized" });
 
   if (req.method === "GET" && req.url === "/health") {
+    console.log("[health] check ok");
     return send(res, 200, { status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
   }
 

@@ -6,7 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { canManageSap, changedFields, resolveSapUrl, sapAuthTypes, sapMethods, sapModules } from "@/lib/sap-api";
 
 type Client = SupabaseClient<Database>;
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS = 60000;
 
 async function callerAdmin(supabase: Client, userId: string) {
   const { data } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).eq("active", true).limit(1).maybeSingle();
