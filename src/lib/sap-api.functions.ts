@@ -6,7 +6,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { canManageSap, changedFields, resolveSapUrl, sapAuthTypes, sapMethods, sapModules } from "@/lib/sap-api";
 
 type Client = SupabaseClient<Database>;
-const TIMEOUT_MS = 60000;
+// Test timeout is configurable on the server (SAP_TEST_TIMEOUT_MS); large SAP reports can take minutes.
+const timeoutMs = () => Number(process.env.SAP_TEST_TIMEOUT_MS) || 180000;
 
 async function callerAdmin(supabase: Client, userId: string) {
   const { data } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).eq("active", true).limit(1).maybeSingle();
@@ -117,7 +118,7 @@ export const saveSapConnection = createServerFn({ method: "POST" }).middleware([
 async function timedFetch(url: string, init: RequestInit) {
   const started = Date.now();
   try {
-    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs()) });
     const text = (await res.text()).slice(0, 20000);
     return { status: res.status, latency: Date.now() - started, body: text, ok: res.ok, message: `${res.status} ${res.statusText}` };
   } catch (e) {
@@ -158,7 +159,7 @@ export const testSap = createServerFn({ method: "POST" }).middleware([requireApp
         if (body) headers["Content-Type"] = "application/json";
         if (conn?.connection_mode === "proxy") {
           if (!conn.middleware_url) throw new Error("Middleware URL is not configured");
-          result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/sap/request`, { method: "POST", headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1", "x-shared-secret": await readSecret(org, "proxy_secret") }, body: JSON.stringify({ url, method: ep.method, headers, body }) });
+          result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/sap/request`, { method: "POST", headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1", "x-shared-secret": await readSecret(org, "proxy_secret") }, body: JSON.stringify({ url, method: ep.method, headers, body, timeout_ms: timeoutMs() }) });
         } else result = await timedFetch(url, body ? { method: ep.method, headers, body } : { method: ep.method, headers });
       }
     } catch (e) {
