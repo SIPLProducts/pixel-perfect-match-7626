@@ -1,6 +1,11 @@
 // Asset360 SAP Proxy Middleware — standalone, no dependencies (Node 18+).
 import http from "node:http";
 import { timingSafeEqual } from "node:crypto";
+import { existsSync } from "node:fs";
+
+// Load settings from .env next to this file when present (Node 20.6+).
+const envPath = new URL("./.env", import.meta.url);
+if (existsSync(envPath) && typeof process.loadEnvFile === "function") process.loadEnvFile(envPath);
 
 const PORT = Number(process.env.PORT || 3002);
 const SECRET = process.env.PROXY_SECRET || "";
