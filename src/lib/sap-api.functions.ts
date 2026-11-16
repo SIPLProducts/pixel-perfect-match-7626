@@ -7,7 +7,7 @@ import { canManageSap, changedFields, resolveSapUrl, sapAuthTypes, sapMethods, s
 
 type Client = SupabaseClient<Database>;
 // Test timeout is configurable on the server (SAP_TEST_TIMEOUT_MS); large SAP reports can take minutes.
-const timeoutMs = () => Number(process.env.SAP_TEST_TIMEOUT_MS) || 180000;
+const timeoutMs = () => Number(process.env["SAP_TEST_TIMEOUT_MS"]) || 180000;
 
 async function callerAdmin(supabase: Client, userId: string) {
   const { data } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).eq("active", true).limit(1).maybeSingle();
