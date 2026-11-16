@@ -115,11 +115,11 @@ export const saveSapConnection = createServerFn({ method: "POST" }).middleware([
   return { ok: true };
 });
 
-async function timedFetch(url: string, init: RequestInit) {
+async function timedFetch(url: string, init: RequestInit, limit = 20000) {
   const started = Date.now();
   try {
     const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs()) });
-    const text = (await res.text()).slice(0, 20000);
+    const text = (await res.text()).slice(0, limit);
     return { status: res.status, latency: Date.now() - started, body: text, ok: res.ok, message: `${res.status} ${res.statusText}` };
   } catch (e) {
     return { status: 0, latency: Date.now() - started, body: "", ok: false, message: (e as Error).name === "TimeoutError" ? "Request timed out" : "Could not reach host" };
@@ -131,6 +131,25 @@ function middlewareBase(url: string, port: number) {
   // https addresses (ngrok, reverse proxies) already use their standard port; only plain http hosts get the configured port.
   if (!u.port && u.protocol === "http:") u.port = String(port);
   return u.toString().replace(/\/+$/, "");
+}
+
+async function callEndpoint(supabase: Client, org: string, conn: Database["public"]["Tables"]["sap_connection_settings"]["Row"] | null, endpointId: string, limit = 20000) {
+  let result: Awaited<ReturnType<typeof timedFetch>>;
+        const { data: ep } = await supabase.from("sap_endpoints").select("*").eq("id", endpointId).eq("organization_id", org).maybeSingle();
+        if (!ep) throw new Error("Endpoint not found");
+        const url = resolveSapUrl(conn?.base_url ?? "", ep.path);
+        const headers: Record<string, string> = { Accept: "application/json", ...(ep.extra_headers as Record<string, string>) };
+        if (ep.auth_type === "basic") {
+          const own = await readSecret(org, `endpoint:${ep.id}`);
+          headers["Authorization"] = own && ep.credential_user ? basic(ep.credential_user, own) : basic(conn?.technical_user ?? "", await readSecret(org, "sap_password"));
+        }
+        const body = ep.method === "GET" || ep.method === "DELETE" ? undefined : JSON.stringify(Object.fromEntries((ep.request_fields as { name: string; default_value?: string }[]).map(f => [f.name, f.default_value ?? ""])));
+        if (body) headers["Content-Type"] = "application/json";
+        if (conn?.connection_mode === "proxy") {
+          if (!conn.middleware_url) throw new Error("Middleware URL is not configured");
+          result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/sap/request`, { method: "POST", headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1", "x-shared-secret": await readSecret(org, "proxy_secret") }, body: JSON.stringify({ url, method: ep.method, headers, body, timeout_ms: timeoutMs() }) }, limit);
+        } else result = await timedFetch(url, body ? { method: ep.method, headers, body } : { method: ep.method, headers }, limit);
+  return result;
 }
 
 export const testSap = createServerFn({ method: "POST" }).middleware([requireAppAuth])
@@ -146,25 +165,30 @@ export const testSap = createServerFn({ method: "POST" }).middleware([requireApp
       } else if (data.target === "connection") {
         if (!conn?.base_url) throw new Error("SAP Base URL is not configured");
         result = await timedFetch(conn.base_url, { method: "GET", headers: { Authorization: basic(conn.technical_user, await readSecret(org, "sap_password")) } });
-      } else {
-        const { data: ep } = await context.supabase.from("sap_endpoints").select("*").eq("id", data.endpointId!).eq("organization_id", org).maybeSingle();
-        if (!ep) throw new Error("Endpoint not found");
-        const url = resolveSapUrl(conn?.base_url ?? "", ep.path);
-        const headers: Record<string, string> = { Accept: "application/json", ...(ep.extra_headers as Record<string, string>) };
-        if (ep.auth_type === "basic") {
-          const own = await readSecret(org, `endpoint:${ep.id}`);
-          headers["Authorization"] = own && ep.credential_user ? basic(ep.credential_user, own) : basic(conn?.technical_user ?? "", await readSecret(org, "sap_password"));
-        }
-        const body = ep.method === "GET" || ep.method === "DELETE" ? undefined : JSON.stringify(Object.fromEntries((ep.request_fields as { name: string; default_value?: string }[]).map(f => [f.name, f.default_value ?? ""])));
-        if (body) headers["Content-Type"] = "application/json";
-        if (conn?.connection_mode === "proxy") {
-          if (!conn.middleware_url) throw new Error("Middleware URL is not configured");
-          result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/sap/request`, { method: "POST", headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1", "x-shared-secret": await readSecret(org, "proxy_secret") }, body: JSON.stringify({ url, method: ep.method, headers, body, timeout_ms: timeoutMs() }) });
-        } else result = await timedFetch(url, body ? { method: ep.method, headers, body } : { method: ep.method, headers });
-      }
+      } else result = await callEndpoint(context.supabase, org, conn, data.endpointId!);
     } catch (e) {
       result = { status: 0, latency: 0, body: "", ok: false, message: (e as Error).message };
     }
     await context.supabase.from("sap_test_logs").insert({ organization_id: org, endpoint_id: data.endpointId ?? null, target: data.target, status: result.status || null, latency_ms: result.latency, message: result.message, actor_id: context.userId });
     return result;
+  });
+
+// Asset Master: runs a saved endpoint and returns its rows for display (read-only, nothing is stored).
+function findRows(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) return value.filter(v => v && typeof v === "object") as Record<string, unknown>[];
+  if (value && typeof value === "object") for (const v of Object.values(value)) { const r = findRows(v); if (r.length) return r; }
+  return [];
+}
+export const fetchSapData = createServerFn({ method: "POST" }).middleware([requireAppAuth])
+  .inputValidator((d: { endpointId: string }) => z.object({ endpointId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const org = await callerAdmin(context.supabase, context.userId);
+    const { data: conn } = await context.supabase.from("sap_connection_settings").select("*").eq("organization_id", org).maybeSingle();
+    let result: Awaited<ReturnType<typeof timedFetch>>;
+    try { result = await callEndpoint(context.supabase, org, conn, data.endpointId, 60_000_000); }
+    catch (e) { result = { status: 0, latency: 0, body: "", ok: false, message: (e as Error).message }; }
+    await context.supabase.from("sap_test_logs").insert({ organization_id: org, endpoint_id: data.endpointId, target: "endpoint", status: result.status || null, latency_ms: result.latency, message: `Asset Master: ${result.message}`, actor_id: context.userId });
+    let rows: Record<string, unknown>[] = [];
+    if (result.ok) { try { rows = findRows(JSON.parse(result.body)); } catch { result.message = "Response is not JSON"; } }
+    return { ok: result.ok, status: result.status, latency: result.latency, message: result.message, rows: JSON.parse(JSON.stringify(rows)) as Record<string, string | number | boolean | null>[] };
   });
