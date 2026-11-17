@@ -564,6 +564,7 @@ export type Database = {
           remarks: string | null
           room: string | null
           serial_number: string | null
+          source: string
           special_depreciation: number | null
           starting_book_value: number | null
           status: Database["public"]["Enums"]["asset_status"]
@@ -627,6 +628,7 @@ export type Database = {
           remarks?: string | null
           room?: string | null
           serial_number?: string | null
+          source?: string
           special_depreciation?: number | null
           starting_book_value?: number | null
           status?: Database["public"]["Enums"]["asset_status"]
@@ -690,6 +692,7 @@ export type Database = {
           remarks?: string | null
           room?: string | null
           serial_number?: string | null
+          source?: string
           special_depreciation?: number | null
           starting_book_value?: number | null
           status?: Database["public"]["Enums"]["asset_status"]
@@ -1757,6 +1760,10 @@ export type Database = {
           _token: string
         }
         Returns: string
+      }
+      sync_sap_asset_rows: {
+        Args: { _organization_id: string; _rows: Json }
+        Returns: Json
       }
     }
     Enums: {

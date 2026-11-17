@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { SAP_SYNC_BATCH } from "@/lib/sap-asset-sync";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAppAuth } from "@/lib/app-auth";
 import type { Database } from "@/integrations/supabase/types";
@@ -191,4 +192,13 @@ export const fetchSapData = createServerFn({ method: "POST" }).middleware([requi
     let rows: Record<string, unknown>[] = [];
     if (result.ok) { try { rows = findRows(JSON.parse(result.body)); } catch { result.message = "Response is not JSON"; } }
     return { ok: result.ok, status: result.status, latency: result.latency, message: result.message, rows: JSON.parse(JSON.stringify(rows)) as Record<string, string | number | boolean | null>[] };
+  });
+
+export const syncSapAssets = createServerFn({ method: "POST" }).middleware([requireAppAuth])
+  .inputValidator((d: { rows: unknown[] }) => z.object({ rows: z.array(z.record(z.string(), z.unknown())).min(1).max(SAP_SYNC_BATCH) }).parse(d))
+  .handler(async ({ context, data }) => {
+    const org = await callerAdmin(context.supabase, context.userId);
+    const { data: result, error } = await context.supabase.rpc("sync_sap_asset_rows", { _organization_id: org, _rows: data.rows as never });
+    if (error) throw new Error(`SAP sync batch was not saved: ${error.message}`);
+    return result as { inserted: number; updated: number; skipped: number };
   });

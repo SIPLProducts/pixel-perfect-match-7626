@@ -204,6 +204,13 @@
       "when": 1794582071912,
       "tag": "0028_sap_api_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794913543190,
+      "tag": "0029_sap_asset_sync",
+      "breakpoints": true
     }
   ]
 }
