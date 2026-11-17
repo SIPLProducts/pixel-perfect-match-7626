@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlantMultiSelect } from "@/components/asset360/shared/plant-multi-select";
 import { Progress } from "@/components/ui/progress";
 import { fetchSapData, getSapSettings, syncSapAssets } from "@/lib/sap-api.functions";
 import { mapSapRows, SAP_SYNC_BATCH, type SapRow } from "@/lib/sap-asset-sync";
@@ -20,10 +21,10 @@ export function SapSyncDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const endpoints = (settings.data?.endpoints ?? []).filter(e => e.active);
   const endpoint = endpoints.find(e => e.name.trim().toLowerCase() === "asset qr api") ?? endpoints.find(e => String((e as { path?: string }).path ?? "").includes("/asset/qr/report")) ?? endpoints.find(e => /asset\s*qr/i.test(e.name)) ?? endpoints[0];
   const [phase, setPhase] = useState<Phase>("idle"); const [rows, setRows] = useState<SapRow[]>([]);
-  const [plant, setPlant] = useState("all"); const [done, setDone] = useState(0); const [totals, setTotals] = useState({ inserted: 0, updated: 0, skipped: 0 });
+  const [plantSel, setPlantSel] = useState<string[]>([]); const [done, setDone] = useState(0); const [totals, setTotals] = useState({ inserted: 0, updated: 0, skipped: 0 });
   const cancel = useRef(false);
   const plants = useMemo(() => Array.from(new Set(rows.map(r => String(r["WERKS"] ?? "").trim()).filter(Boolean))).sort(), [rows]);
-  const selected = useMemo(() => mapSapRows(plant === "all" ? rows : rows.filter(r => String(r["WERKS"] ?? "").trim() === plant)), [rows, plant]);
+  const selected = useMemo(() => mapSapRows(plantSel.length === 0 ? rows : rows.filter(r => plantSel.includes(String(r["WERKS"] ?? "").trim()))), [rows, plantSel]);
 
   async function fetchRows() {
     if (!endpoint) return; setPhase("fetching");
@@ -52,7 +53,7 @@ export function SapSyncDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           {(phase === "idle" || phase === "fetching") && <Button variant="hero" className="w-full" onClick={fetchRows} disabled={phase === "fetching"}>{phase === "fetching" ? <><LoaderCircle className="animate-spin" />Loading from SAP… this can take a minute</> : <><RefreshCw />Load assets from SAP</>}</Button>}
           {phase !== "idle" && phase !== "fetching" && <>
             <p className="text-sm text-muted-foreground">{rows.length.toLocaleString()} records received from SAP.</p>
-            <Select value={plant} onValueChange={setPlant} disabled={phase === "syncing"}><SelectTrigger aria-label="Plant"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All plants</SelectItem>{plants.map(p => <SelectItem key={p} value={p}>Plant {p}</SelectItem>)}</SelectContent></Select>
+            <PlantMultiSelect plants={plants} value={plantSel} onChange={setPlantSel} disabled={phase === "syncing"} prefix="Plant " />
             {phase !== "ready" && <div className="space-y-2"><Progress value={selected.length ? (done / selected.length) * 100 : 0} /><p className="text-xs text-muted-foreground">{done.toLocaleString()} of {selected.length.toLocaleString()} · {totals.inserted} added · {totals.updated} updated{totals.skipped ? ` · ${totals.skipped} skipped (ID used by a manual asset)` : ""}</p></div>}
             {phase === "syncing" ? <Button variant="outline" className="w-full" onClick={() => { cancel.current = true; }}>Stop after this batch</Button>
               : <Button variant="hero" className="w-full" onClick={start} disabled={!selected.length}>{phase === "done" ? "Sync again" : `Sync ${selected.length.toLocaleString()} assets`}</Button>}
