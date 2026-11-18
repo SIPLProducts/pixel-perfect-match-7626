@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { buildLabelsPdf, labelQr, labelSizes, type LabelAsset, type LabelSize } from "@/lib/asset-labels";
+import { buildLabelsPdf, buildLabelsPrintDocument, labelQr, labelSizes, printLabelsInFrame, type LabelAsset, type LabelSize } from "@/lib/asset-labels";
 import { recordQrPrints } from "@/lib/asset360.functions";
 import { deliverTrackedLabels } from "@/lib/qr-print-tracking";
 
@@ -29,17 +29,16 @@ export function LabelDialog({ open, onOpenChange, assets, organization }: { open
     if (ready.length > 500) { toast.error("Select up to 500 assets per label batch."); return; }
     inProgress.current = true; setBusy(true);
     try {
-      const pdf = await buildLabelsPdf(ready, size, organization);
       const operationId = crypto.randomUUID();
-      await deliverTrackedLabels(async () => { if (print) {
-        const url = URL.createObjectURL(pdf.output("blob"));
-        const frame = document.createElement("iframe");
-        frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
-        frame.onload = () => { try { frame.contentWindow?.focus(); frame.contentWindow?.print(); } catch { window.open(url, "_blank", "noopener"); } };
-        frame.src = url;
-        document.body.appendChild(frame);
-        window.setTimeout(() => { frame.remove(); URL.revokeObjectURL(url); }, 300000);
-      } else await pdf.save("HBL-Asset360-QR-Labels.pdf", { returnPromise: true }); }, () => record({ data: { operationId, assetIds: ready.map(asset => asset.id), action: print ? "print" : "pdf" } }));
+      await deliverTrackedLabels(async () => {
+        if (print) {
+          const html = await buildLabelsPrintDocument(ready, size, organization);
+          await printLabelsInFrame(html);
+        } else {
+          const pdf = await buildLabelsPdf(ready, size, organization);
+          await pdf.save("HBL-Asset360-QR-Labels.pdf", { returnPromise: true });
+        }
+      }, () => record({ data: { operationId, assetIds: ready.map(asset => asset.id), action: print ? "print" : "pdf" } }));
       void queryClient.invalidateQueries({ queryKey: ["workspace"] });
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not prepare labels"); }
     finally { inProgress.current = false; setBusy(false); }
