@@ -5,6 +5,16 @@ export const sapAuthTypes = ["basic", "proxy", "none", "oauth"] as const;
 export const sapAdminRoles = new Set(["super_admin", "admin"]);
 export const canManageSap = (role?: string | null) => !!role && sapAdminRoles.has(role);
 
+export type SapDataResult = {
+  ok: boolean; status: number; latency: number; message: string;
+  rows: Record<string, string | number | boolean | null>[];
+};
+
+/** Keep large SAP reports out of the server-function object serialization envelope. */
+export function sapDataResponse(result: SapDataResult): Response {
+  return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+}
+
 export type RequestField = { name: string; source: "static" | "column" | "expr" | "secret"; default_value: string; required: boolean; sort: number };
 export type ResponseField = { name: string; target_table: string; target_column: string; transform: string; sort: number };
 

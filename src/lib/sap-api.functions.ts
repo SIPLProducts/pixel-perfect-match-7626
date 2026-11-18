@@ -4,7 +4,7 @@ import { SAP_SYNC_BATCH } from "@/lib/sap-asset-sync";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAppAuth } from "@/lib/app-auth";
 import type { Database } from "@/integrations/supabase/types";
-import { canManageSap, changedFields, resolveSapUrl, sapAuthTypes, sapMethods, sapModules } from "@/lib/sap-api";
+import { canManageSap, changedFields, resolveSapUrl, sapAuthTypes, sapMethods, sapModules, sapDataResponse } from "@/lib/sap-api";
 
 type Client = SupabaseClient<Database>;
 // Test timeout is configurable on the server (SAP_TEST_TIMEOUT_MS); large SAP reports can take minutes.
@@ -166,7 +166,10 @@ export const testSap = createServerFn({ method: "POST" }).middleware([requireApp
       } else if (data.target === "connection") {
         if (!conn?.base_url) throw new Error("SAP Base URL is not configured");
         result = await timedFetch(conn.base_url, { method: "GET", headers: { Authorization: basic(conn.technical_user, await readSecret(org, "sap_password")) } });
-      } else result = await callEndpoint(context.supabase, org, conn, data.endpointId!);
+      } else {
+        if (!data.endpointId) throw new Error("Endpoint is required");
+        result = await callEndpoint(context.supabase, org, conn, data.endpointId);
+      }
     } catch (e) {
       result = { status: 0, latency: 0, body: "", ok: false, message: (e as Error).message };
     }
@@ -191,7 +194,7 @@ export const fetchSapData = createServerFn({ method: "POST" }).middleware([requi
     await context.supabase.from("sap_test_logs").insert({ organization_id: org, endpoint_id: data.endpointId, target: "endpoint", status: result.status || null, latency_ms: result.latency, message: `Asset Master: ${result.message}`, actor_id: context.userId });
     let rows: Record<string, unknown>[] = [];
     if (result.ok) { try { rows = findRows(JSON.parse(result.body)); } catch { result.message = "Response is not JSON"; } }
-    return { ok: result.ok, status: result.status, latency: result.latency, message: result.message, rows: JSON.parse(JSON.stringify(rows)) as Record<string, string | number | boolean | null>[] };
+    return sapDataResponse({ ok: result.ok, status: result.status, latency: result.latency, message: result.message, rows: rows as Record<string, string | number | boolean | null>[] });
   });
 
 export const syncSapAssets = createServerFn({ method: "POST" }).middleware([requireAppAuth])

@@ -10,6 +10,7 @@ import { PlantMultiSelect } from "@/components/asset360/shared/plant-multi-selec
 import { Progress } from "@/components/ui/progress";
 import { fetchSapData, getSapSettings, syncSapAssets } from "@/lib/sap-api.functions";
 import { mapSapRows, SAP_SYNC_BATCH, type SapRow } from "@/lib/sap-asset-sync";
+import type { SapDataResult } from "@/lib/sap-api";
 
 type Phase = "idle" | "fetching" | "ready" | "syncing" | "done";
 
@@ -28,7 +29,13 @@ export function SapSyncDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
   async function fetchRows() {
     if (!endpoint) return; setPhase("fetching");
-    try { const r = await run({ data: { endpointId: endpoint.id } }); if (!r.ok) { toast.error(r.message); setPhase("idle"); return; } setRows(r.rows); setPhase("ready"); }
+    try {
+      const response = await run({ data: { endpointId: endpoint.id } });
+      if (!response.ok) throw new Error("SAP results could not be loaded. Please try again.");
+      const r: SapDataResult = await response.json();
+      if (!r.ok) { toast.error(r.message); setPhase("idle"); return; }
+      setRows(r.rows); setPhase("ready");
+    }
     catch (e) { toast.error((e as Error).message); setPhase("idle"); }
   }
   async function start() {

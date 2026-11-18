@@ -1,8 +1,22 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { canManageSap, changedFields, flattenJson, mergeFieldNames, parseHeaders, resolveSapUrl } from "./sap-api";
+import { canManageSap, changedFields, flattenJson, mergeFieldNames, parseHeaders, resolveSapUrl, sapDataResponse } from "./sap-api";
 
 describe("sap api helpers", () => {
+  it("delivers a large SAP report as uncached JSON without a serialization envelope", async () => {
+    const rows = Array.from({ length: 24896 }, (_, i) => ({ ANLN1: String(i), WERKS: "1000", TXT50: `Asset ${i}` }));
+    const response = sapDataResponse({ ok: true, status: 200, latency: 47000, message: "200 OK", rows });
+    assert.equal(response.headers.get("Cache-Control"), "no-store");
+    assert.equal(response.headers.get("Content-Type")?.split(";")[0], "application/json");
+    const result = await response.json();
+    assert.equal(result.rows.length, 24896);
+    assert.deepEqual(result.rows[24895], rows[24895]);
+    assert.equal(result.ok, true);
+  });
+  it("preserves failed SAP results for the existing error display", async () => {
+    const result = { ok: false, status: 0, latency: 180000, message: "Request timed out", rows: [] };
+    assert.deepEqual(await sapDataResponse(result).json(), result);
+  });
   it("joins relative paths and collapses slashes", () => {
     assert.equal(resolveSapUrl("https://sap.local:8000/", "//service_node/action?client=300"), "https://sap.local:8000/service_node/action?client=300");
   });
