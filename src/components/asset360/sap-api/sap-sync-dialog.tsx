@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlantMultiSelect } from "@/components/asset360/shared/plant-multi-select";
 import { Progress } from "@/components/ui/progress";
-import { fetchSapData, getSapSettings, syncSapAssets } from "@/lib/sap-api.functions";
+import { fetchSapData, finishSapSyncRun, getSapSettings, startSapSyncRun, syncSapAssets } from "@/lib/sap-api.functions";
 import { mapSapRows, SAP_SYNC_BATCH, type SapRow } from "@/lib/sap-asset-sync";
+import { selectAssetQrEndpoint } from "@/lib/sap-sync-schedule";
 import type { SapDataResult } from "@/lib/sap-api";
 
 type Phase = "idle" | "fetching" | "ready" | "syncing" | "done";
@@ -17,10 +18,11 @@ type Phase = "idle" | "fetching" | "ready" | "syncing" | "done";
 /** Pulls the ASSET QR API from SAP API Settings and saves rows into the asset register with QR codes. */
 export function SapSyncDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const load = useServerFn(getSapSettings); const run = useServerFn(fetchSapData); const sync = useServerFn(syncSapAssets);
+  const startRun = useServerFn(startSapSyncRun); const finishRun = useServerFn(finishSapSyncRun);
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["sap-settings"], queryFn: () => load(), enabled: open });
   const endpoints = (settings.data?.endpoints ?? []).filter(e => e.active);
-  const endpoint = endpoints.find(e => e.name.trim().toLowerCase() === "asset qr api") ?? endpoints.find(e => String((e as { path?: string }).path ?? "").includes("/asset/qr/report")) ?? endpoints.find(e => /asset\s*qr/i.test(e.name)) ?? endpoints[0];
+  const endpoint = selectAssetQrEndpoint(endpoints);
   const [phase, setPhase] = useState<Phase>("idle"); const [rows, setRows] = useState<SapRow[]>([]);
   const [plantSel, setPlantSel] = useState<string[]>([]); const [done, setDone] = useState(0); const [totals, setTotals] = useState({ inserted: 0, updated: 0, skipped: 0 });
   const cancel = useRef(false);
@@ -39,15 +41,25 @@ export function SapSyncDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     catch (e) { toast.error((e as Error).message); setPhase("idle"); }
   }
   async function start() {
-    cancel.current = false; setPhase("syncing"); setDone(0); const t = { inserted: 0, updated: 0, skipped: 0 };
+    cancel.current = false; setPhase("syncing"); setDone(0); setTotals({ inserted: 0, updated: 0, skipped: 0 });
+    const t = { inserted: 0, updated: 0, skipped: 0 }; let runId: string | undefined;
     try {
+      runId = (await startRun({ data: { totalRecords: selected.length } })).id;
       for (let i = 0; i < selected.length && !cancel.current; i += SAP_SYNC_BATCH) {
-        const r = await sync({ data: { rows: selected.slice(i, i + SAP_SYNC_BATCH) } });
+        const r = await sync({ data: { rows: selected.slice(i, i + SAP_SYNC_BATCH), runId } });
         t.inserted += r.inserted; t.updated += r.updated; t.skipped += r.skipped; setTotals({ ...t }); setDone(Math.min(selected.length, i + SAP_SYNC_BATCH));
       }
+      await finishRun({ data: { runId, status: cancel.current ? "cancelled" : "completed" } });
       toast.success(`SAP sync ${cancel.current ? "stopped" : "finished"}: ${t.inserted} added, ${t.updated} updated`);
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setPhase("done"); void queryClient.invalidateQueries({ queryKey: ["workspace"] }); }
+    } catch (e) {
+      const message = (e as Error).message;
+      if (runId) await finishRun({ data: { runId, status: "failed", error: message.slice(0, 500) } }).catch(() => undefined);
+      toast.error(message);
+    } finally {
+      setPhase("done");
+      void queryClient.invalidateQueries({ queryKey: ["workspace"] });
+      void queryClient.invalidateQueries({ queryKey: ["sap-sync-status"] });
+    }
   }
 
   return <Dialog open={open} onOpenChange={v => { if (phase !== "syncing") onOpenChange(v); }}>

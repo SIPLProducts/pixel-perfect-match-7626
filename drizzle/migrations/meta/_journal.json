@@ -218,6 +218,13 @@
       "when": 1795007628026,
       "tag": "0030_sap_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795009477365,
+      "tag": "0031_sap_sync_runs",
+      "breakpoints": true
     }
   ]
 }

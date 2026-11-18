@@ -1522,6 +1522,68 @@ export type Database = {
           },
         ]
       }
+      sap_sync_runs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          inserted_count: number
+          organization_id: string
+          processed_records: number
+          skipped_count: number
+          started_at: string
+          status: string
+          total_records: number
+          trigger_type: string
+          updated_at: string
+          updated_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          inserted_count?: number
+          organization_id: string
+          processed_records?: number
+          skipped_count?: number
+          started_at?: string
+          status?: string
+          total_records?: number
+          trigger_type: string
+          updated_at?: string
+          updated_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          inserted_count?: number
+          organization_id?: string
+          processed_records?: number
+          skipped_count?: number
+          started_at?: string
+          status?: string
+          total_records?: number
+          trigger_type?: string
+          updated_at?: string
+          updated_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sap_sync_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sap_test_logs: {
         Row: {
           actor_id: string | null

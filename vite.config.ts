@@ -4,12 +4,26 @@
 //     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import type { NitroModule } from "nitro/types";
+import type { Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+
+const sapAutoSyncModule: NitroModule = {
+  name: "asset360-sap-auto-sync",
+  setup(nitro) {
+    // Only self-hosted Node builds receive a process timer; hosted Worker builds omit it.
+    if (nitro.options.preset === "node-server") {
+      nitro.options.plugins.push(fileURLToPath(new URL("./src/lib/sap-auto-sync.node.ts", import.meta.url)));
+    }
+  },
+};
+const sapAutoSyncPlugin = { name: "asset360-sap-auto-sync", nitro: sapAutoSyncModule } as Plugin & { nitro: NitroModule };
 
 export default defineConfig({
   vite: {
-    plugins: [VitePWA({
+    plugins: [sapAutoSyncPlugin, VitePWA({
       strategies: "generateSW",
       registerType: "autoUpdate",
       injectRegister: null,

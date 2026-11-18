@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as ATokenRouteImport } from './routes/a.$token'
+import { Route as ApiPublicJobsSapSyncRouteImport } from './routes/api/public/jobs/sap-sync'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,6 +46,11 @@ const ATokenRoute = ATokenRouteImport.update({
   path: '/a/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicJobsSapSyncRoute = ApiPublicJobsSapSyncRouteImport.update({
+  id: '/api/public/jobs/sap-sync',
+  path: '/api/public/jobs/sap-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/a/$token': typeof ATokenRoute
+  '/api/public/jobs/sap-sync': typeof ApiPublicJobsSapSyncRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/a/$token': typeof ATokenRoute
+  '/api/public/jobs/sap-sync': typeof ApiPublicJobsSapSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,12 +76,25 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/a/$token': typeof ATokenRoute
+  '/api/public/jobs/sap-sync': typeof ApiPublicJobsSapSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/reset-password' | '/dashboard' | '/a/$token'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/dashboard'
+    | '/a/$token'
+    | '/api/public/jobs/sap-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/reset-password' | '/dashboard' | '/a/$token'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/dashboard'
+    | '/a/$token'
+    | '/api/public/jobs/sap-sync'
   id:
     | '__root__'
     | '/'
@@ -82,6 +103,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/dashboard'
     | '/a/$token'
+    | '/api/public/jobs/sap-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -90,6 +112,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ATokenRoute: typeof ATokenRoute
+  ApiPublicJobsSapSyncRoute: typeof ApiPublicJobsSapSyncRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -136,6 +159,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ATokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/sap-sync': {
+      id: '/api/public/jobs/sap-sync'
+      path: '/api/public/jobs/sap-sync'
+      fullPath: '/api/public/jobs/sap-sync'
+      preLoaderRoute: typeof ApiPublicJobsSapSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -156,6 +186,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ATokenRoute: ATokenRoute,
+  ApiPublicJobsSapSyncRoute: ApiPublicJobsSapSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

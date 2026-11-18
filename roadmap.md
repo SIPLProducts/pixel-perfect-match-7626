@@ -1,5 +1,7 @@
 # Sharvi Asset360 roadmap
 
+- [x] Add six-hour all-plant SAP sync for every configured workspace, with overlap protection, run history, Assets status, manual-sync tracking, and self-hosted scheduling
+
 - [x] Resolve SAP fetch failure and verify large report loading in the signed-in workspace without syncing records.
 
 - [x] Add adjustable car sticker dimensions, QR size and branding; verify matching preview, PDF dimensions and scannability

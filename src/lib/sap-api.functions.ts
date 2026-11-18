@@ -1,14 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { SAP_SYNC_BATCH } from "@/lib/sap-asset-sync";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SAP_SYNC_BATCH } from "@/lib/sap-asset-sync";
 import { requireAppAuth } from "@/lib/app-auth";
 import type { Database } from "@/integrations/supabase/types";
-import { canManageSap, changedFields, resolveSapUrl, sapAuthTypes, sapMethods, sapModules, sapDataResponse } from "@/lib/sap-api";
+import { canManageSap, changedFields, sapAuthTypes, sapMethods, sapModules, sapDataResponse } from "@/lib/sap-api";
+import { callSapEndpoint, findSapRows, middlewareBase, readSapSecret, sapBasicAuth, timedSapFetch, type SapCallResult } from "@/lib/sap-api.server";
+import { beginSapSyncRun, finishSapSyncRun as finishTrackedSapSyncRun, recordSapSyncBatch } from "@/lib/sap-sync-runs.server";
+import { nextSapSyncBoundary, selectAssetQrEndpoint } from "@/lib/sap-sync-schedule";
 
 type Client = SupabaseClient<Database>;
-// Test timeout is configurable on the server (SAP_TEST_TIMEOUT_MS); large SAP reports can take minutes.
-const timeoutMs = () => Number(process.env["SAP_TEST_TIMEOUT_MS"]) || 180000;
 
 async function callerAdmin(supabase: Client, userId: string) {
   const { data } = await supabase.from("user_roles").select("organization_id, role").eq("user_id", userId).eq("active", true).limit(1).maybeSingle();
@@ -21,11 +22,7 @@ async function audit(supabase: Client, org: string, actor: string, action: strin
 }
 async function secretFlags(org: string) {
   const { data } = await (await admin()).from("sap_secrets").select("scope").eq("organization_id", org);
-  return new Set((data ?? []).map(r => r.scope));
-}
-async function readSecret(org: string, scope: string) {
-  const { data } = await (await admin()).from("sap_secrets").select("secret").eq("organization_id", org).eq("scope", scope).maybeSingle();
-  return data?.secret ?? "";
+  return new Set((data ?? []).map(row => row.scope));
 }
 async function writeSecret(org: string, scope: string, secret: string) {
   const { error } = await (await admin()).from("sap_secrets").upsert({ organization_id: org, scope, secret, updated_at: new Date().toISOString() });
@@ -52,7 +49,7 @@ export const getSapSettings = createServerFn({ method: "GET" }).middleware([requ
     secretFlags(org),
   ]);
   return {
-    endpoints: (endpoints ?? []).map(e => ({ ...e, password_set: flags.has(`endpoint:${e.id}`) })),
+    endpoints: (endpoints ?? []).map(endpoint => ({ ...endpoint, password_set: flags.has(`endpoint:${endpoint.id}`) })),
     connection: { environment: conn?.environment ?? "Development", base_url: conn?.base_url ?? "", technical_user: conn?.technical_user ?? "", connection_mode: conn?.connection_mode ?? "direct", deployment_mode: conn?.deployment_mode ?? "self_hosted", middleware_url: conn?.middleware_url ?? "", middleware_port: conn?.middleware_port ?? 3002, password_set: flags.has("sap_password"), secret_set: flags.has("proxy_secret") },
   };
 });
@@ -104,7 +101,7 @@ const connSchema = z.object({
 export const saveSapConnection = createServerFn({ method: "POST" }).middleware([requireAppAuth]).inputValidator((d) => connSchema.parse(d)).handler(async ({ context, data }) => {
   const org = await callerAdmin(context.supabase, context.userId);
   const { password, shared_secret, ...raw } = data;
-  const settings = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined)) as Record<string, string | number>;
+  const settings = Object.fromEntries(Object.entries(raw).filter(([, value]) => value !== undefined)) as Record<string, string | number>;
   if (settings["base_url"] && !/^https?:\/\//i.test(String(settings["base_url"]))) throw new Error("Base URL must start with http:// or https://");
   const { data: before } = await context.supabase.from("sap_connection_settings").select("*").eq("organization_id", org).maybeSingle();
   const fields = changedFields((before ?? {}) as Record<string, unknown>, settings);
@@ -116,93 +113,83 @@ export const saveSapConnection = createServerFn({ method: "POST" }).middleware([
   return { ok: true };
 });
 
-async function timedFetch(url: string, init: RequestInit, limit = 20000) {
-  const started = Date.now();
-  try {
-    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs()) });
-    const text = (await res.text()).slice(0, limit);
-    return { status: res.status, latency: Date.now() - started, body: text, ok: res.ok, message: `${res.status} ${res.statusText}` };
-  } catch (e) {
-    return { status: 0, latency: Date.now() - started, body: "", ok: false, message: (e as Error).name === "TimeoutError" ? "Request timed out" : "Could not reach host" };
-  }
-}
-const basic = (u: string, p: string) => `Basic ${btoa(`${u}:${p}`)}`;
-function middlewareBase(url: string, port: number) {
-  const u = new URL(/^https?:\/\//i.test(url) ? url : `http://${url}`);
-  // https addresses (ngrok, reverse proxies) already use their standard port; only plain http hosts get the configured port.
-  if (!u.port && u.protocol === "http:") u.port = String(port);
-  return u.toString().replace(/\/+$/, "");
-}
-
-async function callEndpoint(supabase: Client, org: string, conn: Database["public"]["Tables"]["sap_connection_settings"]["Row"] | null, endpointId: string, limit = 20000) {
-  let result: Awaited<ReturnType<typeof timedFetch>>;
-        const { data: ep } = await supabase.from("sap_endpoints").select("*").eq("id", endpointId).eq("organization_id", org).maybeSingle();
-        if (!ep) throw new Error("Endpoint not found");
-        const url = resolveSapUrl(conn?.base_url ?? "", ep.path);
-        const headers: Record<string, string> = { Accept: "application/json", ...(ep.extra_headers as Record<string, string>) };
-        if (ep.auth_type === "basic") {
-          const own = await readSecret(org, `endpoint:${ep.id}`);
-          headers["Authorization"] = own && ep.credential_user ? basic(ep.credential_user, own) : basic(conn?.technical_user ?? "", await readSecret(org, "sap_password"));
-        }
-        const body = ep.method === "GET" || ep.method === "DELETE" ? undefined : JSON.stringify(Object.fromEntries((ep.request_fields as { name: string; default_value?: string }[]).map(f => [f.name, f.default_value ?? ""])));
-        if (body) headers["Content-Type"] = "application/json";
-        // Proxy mode with no external middleware URL = integrated proxy: QR_QTY calls SAP itself (one process).
-        if (conn?.connection_mode === "proxy" && conn.middleware_url?.trim()) {
-          result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/sap/request`, { method: "POST", headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1", "x-shared-secret": await readSecret(org, "proxy_secret") }, body: JSON.stringify({ url, method: ep.method, headers, body, timeout_ms: timeoutMs() }) }, limit);
-        } else result = await timedFetch(url, body ? { method: ep.method, headers, body } : { method: ep.method, headers }, limit);
-  return result;
-}
-
 export const testSap = createServerFn({ method: "POST" }).middleware([requireAppAuth])
   .inputValidator((d: { target: "connection" | "middleware" | "endpoint"; endpointId?: string }) => z.object({ target: z.enum(["connection", "middleware", "endpoint"]), endpointId: z.string().uuid().optional() }).parse(d))
   .handler(async ({ context, data }) => {
     const org = await callerAdmin(context.supabase, context.userId);
     const { data: conn } = await context.supabase.from("sap_connection_settings").select("*").eq("organization_id", org).maybeSingle();
-    let result: Awaited<ReturnType<typeof timedFetch>>;
+    let result: SapCallResult;
     try {
       if (data.target === "middleware" && !conn?.middleware_url?.trim()) {
         result = { status: 200, latency: 0, body: "", ok: true, message: "Integrated proxy: SAP calls run inside the application server" };
       } else if (data.target === "middleware" && conn?.middleware_url) {
-        result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/health`, { headers: { "x-shared-secret": await readSecret(org, "proxy_secret"), "ngrok-skip-browser-warning": "1" } });
+        result = await timedSapFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/health`, { headers: { "x-shared-secret": await readSapSecret(org, "proxy_secret"), "ngrok-skip-browser-warning": "1" } });
       } else if (data.target === "connection") {
         if (!conn?.base_url) throw new Error("SAP Base URL is not configured");
-        result = await timedFetch(conn.base_url, { method: "GET", headers: { Authorization: basic(conn.technical_user, await readSecret(org, "sap_password")) } });
+        result = await timedSapFetch(conn.base_url, { method: "GET", headers: { Authorization: sapBasicAuth(conn.technical_user, await readSapSecret(org, "sap_password")) } });
       } else {
         if (!data.endpointId) throw new Error("Endpoint is required");
-        result = await callEndpoint(context.supabase, org, conn, data.endpointId);
+        result = await callSapEndpoint(context.supabase, org, conn, data.endpointId);
       }
-    } catch (e) {
-      result = { status: 0, latency: 0, body: "", ok: false, message: (e as Error).message };
+    } catch (error) {
+      result = { status: 0, latency: 0, body: "", ok: false, message: (error as Error).message };
     }
     await context.supabase.from("sap_test_logs").insert({ organization_id: org, endpoint_id: data.endpointId ?? null, target: data.target, status: result.status || null, latency_ms: result.latency, message: result.message, actor_id: context.userId });
     return result;
   });
 
-// Asset Master: runs a saved endpoint and returns its rows for display (read-only, nothing is stored).
-function findRows(value: unknown): Record<string, unknown>[] {
-  if (Array.isArray(value)) return value.filter(v => v && typeof v === "object") as Record<string, unknown>[];
-  if (value && typeof value === "object") for (const v of Object.values(value)) { const r = findRows(v); if (r.length) return r; }
-  return [];
-}
+// Runs a saved endpoint and returns its rows without storing them.
 export const fetchSapData = createServerFn({ method: "POST" }).middleware([requireAppAuth])
   .inputValidator((d: { endpointId: string }) => z.object({ endpointId: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const org = await callerAdmin(context.supabase, context.userId);
     const { data: conn } = await context.supabase.from("sap_connection_settings").select("*").eq("organization_id", org).maybeSingle();
-    let result: Awaited<ReturnType<typeof timedFetch>>;
-    try { result = await callEndpoint(context.supabase, org, conn, data.endpointId, 60_000_000); }
-    catch (e) { result = { status: 0, latency: 0, body: "", ok: false, message: (e as Error).message }; }
+    let result: SapCallResult;
+    try { result = await callSapEndpoint(context.supabase, org, conn, data.endpointId, 60_000_000); }
+    catch (error) { result = { status: 0, latency: 0, body: "", ok: false, message: (error as Error).message }; }
     await context.supabase.from("sap_test_logs").insert({ organization_id: org, endpoint_id: data.endpointId, target: "endpoint", status: result.status || null, latency_ms: result.latency, message: `Asset Master: ${result.message}`, actor_id: context.userId });
     let rows: Record<string, unknown>[] = [];
-    if (result.ok) { try { rows = findRows(JSON.parse(result.body)); } catch { result.message = "Response is not JSON"; } }
+    if (result.ok) { try { rows = findSapRows(JSON.parse(result.body)); } catch { result.message = "Response is not JSON"; } }
     return sapDataResponse({ ok: result.ok, status: result.status, latency: result.latency, message: result.message, rows: rows as Record<string, string | number | boolean | null>[] });
   });
 
+export const getSapSyncStatus = createServerFn({ method: "GET" }).middleware([requireAppAuth]).handler(async ({ context }) => {
+  const org = await callerAdmin(context.supabase, context.userId);
+  const [{ data: runs }, { data: connection }, { data: endpoints }] = await Promise.all([
+    context.supabase.from("sap_sync_runs").select("*").eq("organization_id", org).order("started_at", { ascending: false }).limit(1),
+    context.supabase.from("sap_connection_settings").select("base_url").eq("organization_id", org).maybeSingle(),
+    context.supabase.from("sap_endpoints").select("id,name,path").eq("organization_id", org).eq("active", true),
+  ]);
+  return {
+    configured: Boolean(connection?.base_url && selectAssetQrEndpoint(endpoints ?? [])),
+    latest: runs?.[0] ?? null,
+    nextAutomaticAt: nextSapSyncBoundary(new Date()).toISOString(),
+  };
+});
+
+export const startSapSyncRun = createServerFn({ method: "POST" }).middleware([requireAppAuth])
+  .inputValidator((d: { totalRecords: number }) => z.object({ totalRecords: z.number().int().min(1).max(1_000_000) }).parse(d))
+  .handler(async ({ context, data }) => {
+    const org = await callerAdmin(context.supabase, context.userId);
+    const run = await beginSapSyncRun(org, "manual", data.totalRecords, context.userId);
+    return { id: run.id };
+  });
+
+export const finishSapSyncRun = createServerFn({ method: "POST" }).middleware([requireAppAuth])
+  .inputValidator((d: { runId: string; status: "completed" | "failed" | "cancelled"; error?: string }) => z.object({ runId: z.string().uuid(), status: z.enum(["completed", "failed", "cancelled"]), error: z.string().max(500).optional() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const org = await callerAdmin(context.supabase, context.userId);
+    await finishTrackedSapSyncRun(data.runId, org, data.status, data.error);
+    return { ok: true };
+  });
+
 export const syncSapAssets = createServerFn({ method: "POST" }).middleware([requireAppAuth])
-  .inputValidator((d: { rows: unknown[] }) => z.object({ rows: z.array(z.record(z.string(), z.unknown())).min(1).max(SAP_SYNC_BATCH) }).parse(d))
+  .inputValidator((d: { rows: unknown[]; runId?: string }) => z.object({ rows: z.array(z.record(z.string(), z.unknown())).min(1).max(SAP_SYNC_BATCH), runId: z.string().uuid().optional() }).parse(d))
   .handler(async ({ context, data }) => {
     const org = await callerAdmin(context.supabase, context.userId);
     const { data: result, error } = await context.supabase.rpc("sync_sap_asset_rows", { _organization_id: org, _rows: data.rows as never });
     if (error) throw new Error(`SAP sync batch was not saved: ${error.message}`);
-    return result as { inserted: number; updated: number; skipped: number };
+    const counts = result as { inserted: number; updated: number; skipped: number };
+    if (data.runId) await recordSapSyncBatch(data.runId, org, data.rows.length, counts);
+    return counts;
   });
