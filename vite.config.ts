@@ -26,6 +26,9 @@ export default defineConfig({
       },
     })],
   },
+  // Self-hosted servers (Quality/Production) run the Node.js server output in .output/server/index.mjs.
+  // The Lovable build environment overrides this automatically, so the preview keeps working.
+  nitro: { preset: "node-server" },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

@@ -34,3 +34,4 @@
 - Dashboard lives in src/components/asset360/dashboard/; all figures come from the signed-in workspace's cached data via pure helpers in report-builders.ts, and extra sections reach CSV/PDF/Excel through DashboardReport.sections so the three exports stay aligned.
 - SAP API Settings (src/lib/sap-api*.ts, components/asset360/sap-api/) is Super Admin/Admin only; SAP passwords and proxy secrets live in sap_secrets (service-role only) and the browser only sees saved flags, so credentials never reach the client.
 - SAP assets enter the register only through sync_sap_asset_rows (batches of ≤500, admin-only, mapping in src/lib/sap-asset-sync.ts): rows are keyed by SAP asset number, marked source='sap', get a QR on insert and keep it on re-sync, and never overwrite manual assets (one register, stable printed QRs).
+- Self-hosted builds use Nitro node-server (vite.config.ts); Lovable's build overrides it, so one codebase serves both.
