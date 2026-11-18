@@ -27,22 +27,21 @@ export function LabelDialog({ open, onOpenChange, assets, organization }: { open
   async function exportLabels(print: boolean) {
     if (inProgress.current || !ready.length) return;
     if (ready.length > 500) { toast.error("Select up to 500 assets per label batch."); return; }
-    // Reserve a window synchronously so browsers do not block the print action.
-    const printWindow = print ? window.open("", "_blank") : null;
-    if (print && !printWindow) { toast.error("Allow pop-ups to open the printable labels, or download the PDF."); return; }
-    if (printWindow) printWindow.opener = null;
     inProgress.current = true; setBusy(true);
     try {
       const pdf = await buildLabelsPdf(ready, size, organization);
       const operationId = crypto.randomUUID();
-      await deliverTrackedLabels(async () => { if (printWindow) {
-        pdf.autoPrint();
+      await deliverTrackedLabels(async () => { if (print) {
         const url = URL.createObjectURL(pdf.output("blob"));
-        printWindow.location.href = url;
-        window.setTimeout(() => URL.revokeObjectURL(url), 300000);
+        const frame = document.createElement("iframe");
+        frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+        frame.onload = () => { try { frame.contentWindow?.focus(); frame.contentWindow?.print(); } catch { window.open(url, "_blank", "noopener"); } };
+        frame.src = url;
+        document.body.appendChild(frame);
+        window.setTimeout(() => { frame.remove(); URL.revokeObjectURL(url); }, 300000);
       } else await pdf.save("HBL-Asset360-QR-Labels.pdf", { returnPromise: true }); }, () => record({ data: { operationId, assetIds: ready.map(asset => asset.id), action: print ? "print" : "pdf" } }));
       void queryClient.invalidateQueries({ queryKey: ["workspace"] });
-    } catch (error) { printWindow?.close(); toast.error(error instanceof Error ? error.message : "Could not prepare labels"); }
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not prepare labels"); }
     finally { inProgress.current = false; setBusy(false); }
   }
   async function downloadPng() {
