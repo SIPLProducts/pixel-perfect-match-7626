@@ -1,3 +1,4 @@
+import { randomId } from "@/lib/uuid";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Download, FileText, LoaderCircle, Paperclip, X } from "lucide-react";
@@ -30,7 +31,7 @@ export function AssetDocumentPicker({ pending, onChange, existing }: { pending: 
   return <section className="border-b border-glass-border py-6"><h3 className="mb-5 flex items-center gap-2 font-display text-base font-bold"><Paperclip className="size-4" />Asset attachments</h3><div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">{documentTypes.map(type => <div key={type.id} className="min-w-0"><label htmlFor={`attachment-${type.id}`} className="mb-2 block text-sm font-medium">{type.label}</label><input id={`attachment-${type.id}`} type="file" multiple accept={DOCUMENT_ACCEPT} className="block w-full min-w-0 text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-glass-strong file:px-3 file:py-2 file:text-foreground" onChange={event => {
     const added: PendingDocument[] = [];
     for (const file of Array.from(event.target.files ?? [])) {
-      try { validateDocumentFile(file); added.push({ id: crypto.randomUUID(), type: type.id, file }); }
+      try { validateDocumentFile(file); added.push({ id: randomId(), type: type.id, file }); }
       catch (error) { toast.error(`${file.name}: ${error instanceof Error ? error.message : "Invalid file"}`); }
     }
     onChange([...pending, ...added]); event.target.value = "";

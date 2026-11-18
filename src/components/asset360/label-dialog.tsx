@@ -1,3 +1,4 @@
+import { randomId } from "@/lib/uuid";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,7 +30,7 @@ export function LabelDialog({ open, onOpenChange, assets, organization }: { open
     if (ready.length > 500) { toast.error("Select up to 500 assets per label batch."); return; }
     inProgress.current = true; setBusy(true);
     try {
-      const operationId = crypto.randomUUID();
+      const operationId = randomId();
       await deliverTrackedLabels(async () => {
         if (print) {
           const html = await buildLabelsPrintDocument(ready, size, organization);
@@ -48,7 +49,7 @@ export function LabelDialog({ open, onOpenChange, assets, organization }: { open
     inProgress.current = true; setBusy(true);
     try {
       const link = document.createElement("a"); link.href = await labelQr(first); link.download = `${first.asset_id}-qr.png`;
-      const operationId = crypto.randomUUID();
+      const operationId = randomId();
       await deliverTrackedLabels(() => link.click(), () => record({ data: { operationId, assetIds: [first.id], action: "png" } }));
       void queryClient.invalidateQueries({ queryKey: ["workspace"] });
     }
