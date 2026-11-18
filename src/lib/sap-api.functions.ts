@@ -146,8 +146,8 @@ async function callEndpoint(supabase: Client, org: string, conn: Database["publi
         }
         const body = ep.method === "GET" || ep.method === "DELETE" ? undefined : JSON.stringify(Object.fromEntries((ep.request_fields as { name: string; default_value?: string }[]).map(f => [f.name, f.default_value ?? ""])));
         if (body) headers["Content-Type"] = "application/json";
-        if (conn?.connection_mode === "proxy") {
-          if (!conn.middleware_url) throw new Error("Middleware URL is not configured");
+        // Proxy mode with no external middleware URL = integrated proxy: QR_QTY calls SAP itself (one process).
+        if (conn?.connection_mode === "proxy" && conn.middleware_url?.trim()) {
           result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/sap/request`, { method: "POST", headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1", "x-shared-secret": await readSecret(org, "proxy_secret") }, body: JSON.stringify({ url, method: ep.method, headers, body, timeout_ms: timeoutMs() }) }, limit);
         } else result = await timedFetch(url, body ? { method: ep.method, headers, body } : { method: ep.method, headers }, limit);
   return result;
@@ -160,8 +160,9 @@ export const testSap = createServerFn({ method: "POST" }).middleware([requireApp
     const { data: conn } = await context.supabase.from("sap_connection_settings").select("*").eq("organization_id", org).maybeSingle();
     let result: Awaited<ReturnType<typeof timedFetch>>;
     try {
-      if (data.target === "middleware") {
-        if (!conn?.middleware_url) throw new Error("Middleware URL is not configured");
+      if (data.target === "middleware" && !conn?.middleware_url?.trim()) {
+        result = { status: 200, latency: 0, body: "", ok: true, message: "Integrated proxy: SAP calls run inside the application server" };
+      } else if (data.target === "middleware" && conn?.middleware_url) {
         result = await timedFetch(`${middlewareBase(conn.middleware_url, conn.middleware_port)}/health`, { headers: { "x-shared-secret": await readSecret(org, "proxy_secret"), "ngrok-skip-browser-warning": "1" } });
       } else if (data.target === "connection") {
         if (!conn?.base_url) throw new Error("SAP Base URL is not configured");
