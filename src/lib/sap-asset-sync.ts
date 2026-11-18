@@ -28,7 +28,7 @@ export function mapSapRow(row: SapRow) {
     base_unit: text(row["MEINS"]), erp_location: text(row["STORT"]), wbs_element: text(row["POSNR"]), planned_life: text(row["DAUER"]),
     depreciation_key: text(row["AFASL"]), depreciation_start_date: sapDate(row["AFABG"]), external_asset_number: text(row["ANLN1"]),
     asset_subnumber: text(row["ANLN2"]), currency: text(row["WAERS"]), accumulated_depreciation: num(row["KNAFA"]),
-    special_depreciation: num(row["KSAFA"]), planned_depreciation: num(row["NAFAP"]), subcategory: text(row["ANLKL"]),
+    special_depreciation: num(row["KSAFA"]), planned_depreciation: num(row["NAFAP"]), subcategory: text(row["ANLKL"]), sap_fields: row,
   };
 }
 export function mapSapRows(rows: SapRow[]) { return rows.map(mapSapRow).filter((r): r is NonNullable<typeof r> => r !== null); }

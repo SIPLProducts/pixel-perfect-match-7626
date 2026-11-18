@@ -211,6 +211,13 @@
       "when": 1794913543190,
       "tag": "0029_sap_asset_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795007628026,
+      "tag": "0030_sap_fields",
+      "breakpoints": true
     }
   ]
 }

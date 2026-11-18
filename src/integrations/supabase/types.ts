@@ -563,6 +563,7 @@ export type Database = {
           quantity: number | null
           remarks: string | null
           room: string | null
+          sap_fields: Json | null
           serial_number: string | null
           source: string
           special_depreciation: number | null
@@ -627,6 +628,7 @@ export type Database = {
           quantity?: number | null
           remarks?: string | null
           room?: string | null
+          sap_fields?: Json | null
           serial_number?: string | null
           source?: string
           special_depreciation?: number | null
@@ -691,6 +693,7 @@ export type Database = {
           quantity?: number | null
           remarks?: string | null
           room?: string | null
+          sap_fields?: Json | null
           serial_number?: string | null
           source?: string
           special_depreciation?: number | null
