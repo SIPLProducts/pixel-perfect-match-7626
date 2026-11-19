@@ -1,10 +1,14 @@
 import { queryOptions } from "@tanstack/react-query";
-import { getWorkspaceData } from "@/lib/asset360.functions";
+import { getWorkspaceData, type WorkspacePayload } from "@/lib/asset360.functions";
 import { WORKSPACE_FALLBACK_MS } from "./workspace-sync";
 
 export const workspaceQueryOptions = (userId: string) => queryOptions({
   queryKey: ["workspace", userId],
-  queryFn: () => getWorkspaceData(),
+  queryFn: async (): Promise<WorkspacePayload> => {
+    const response = (await getWorkspaceData()) as unknown as Response;
+    if (!response.ok) throw new Error("Workspace could not be loaded");
+    return response.json();
+  },
   staleTime: 10_000,
   refetchInterval: WORKSPACE_FALLBACK_MS,
   refetchIntervalInBackground: false,

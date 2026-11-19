@@ -22,7 +22,7 @@ import { Locations } from "./locations";
 import { Employees } from "./employees";
 import { latestAssetTransfers } from "@/lib/asset-transfer-summary";
 import { LabelDialog } from "@/components/asset360/label-dialog";
-import { bootstrapWorkspace, getWorkspaceData } from "@/lib/asset360.functions";
+import { bootstrapWorkspace, type WorkspacePayload } from "@/lib/asset360.functions";
 import { exportDashboardCsv, exportDashboardPdf, type DashboardReport } from "@/lib/dashboard-export";
 import { Reports } from "./reports";
 import { AuditTrail } from "./audit-trail";
@@ -47,7 +47,7 @@ import { SapApiSettings } from "@/components/asset360/sap-api/sap-api-settings";
 import { canManageSap } from "@/lib/sap-api";
 import { Progress } from "@/components/ui/progress";
 
-export type WorkspaceData = Exclude<Awaited<ReturnType<typeof getWorkspaceData>>, { needsOnboarding: true }>;
+export type WorkspaceData = Exclude<WorkspacePayload, { needsOnboarding: true }>;
 type Asset = WorkspaceData["assets"][number];
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const activeStatuses = new Set(["active", "assigned", "in_stock"]);

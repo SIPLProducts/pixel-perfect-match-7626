@@ -97,9 +97,17 @@ export const bootstrapWorkspace = createServerFn({ method: "POST" })
     return { organizationId };
   });
 
+type AppAuthContext = { supabase: SupabaseClient<Database>; userId: string };
+
+// Large registers (25k+ SAP assets) exceed the server-function serializer's output limit,
+// so the workspace is sent as a plain JSON response and parsed in workspace-query.ts.
 export const getWorkspaceData = createServerFn({ method: "GET" })
   .middleware([requireAppAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }) => Response.json(await loadWorkspaceData(context), { headers: { "Cache-Control": "no-store" } }));
+
+export type WorkspacePayload = Awaited<ReturnType<typeof loadWorkspaceData>>;
+
+async function loadWorkspaceData(context: AppAuthContext) {
     const memberships = await getMemberships(context.supabase, context.userId);
     const membership = memberships.find((m) => m.active) ?? null;
     if (!membership) return { needsOnboarding: true as const, deactivated: memberships.length > 0 };
@@ -142,7 +150,7 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
       serviceRequests.push(...batch);
     }
     return { needsOnboarding: false as const, cars: cars.data ?? [], carMessages: carMessages.data ?? [], organization: organization.data, profile: profile.data, role: membership.role, workspaceUsers: printUsers.data ?? [], qrPrintHistory: printHistory, attachments: attachments.data ?? [], assets: (assets.data ?? []).map(asset => ({ ...asset, qr_print_count: printCounts.get(asset.id) ?? 0, parent_category_name: parentCategoryName(categories.data ?? [], asset.category_id) })), categories: categories.data ?? [], locations: locations.data ?? [], departments: departments.data ?? [], employees: employees.data ?? [], transfers: transfers.data ?? [], maintenance: serviceRequests, verifications: verifications.data ?? [], events: events.data ?? [] };
-  });
+}
 
 export const recordQrPrints = createServerFn({ method: "POST" })
   .middleware([requireAppAuth])
