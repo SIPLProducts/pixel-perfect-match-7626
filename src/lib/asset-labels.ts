@@ -66,6 +66,11 @@ export async function buildLabelsPdf(assets: LabelAsset[], size: LabelSize, orga
   return pdf;
 }
 
+export async function labelQrSvg(asset: LabelAsset) {
+  if (!asset.asset_qr_codes?.token) throw new Error(`${asset.asset_id} has no QR token`);
+  return QRCode.toString(assetVerificationUrl("", asset.asset_qr_codes.token), { type: "svg", margin: 2, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } });
+}
+
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
 }
@@ -75,10 +80,10 @@ export async function buildLabelsPrintDocument(assets: LabelAsset[], size: Label
   const { width, height } = labelSizes[size];
   const pad = 5; // px padding on every side of the sticker
   const qrSize = `calc(${height}mm - ${pad * 2}px)`;
-  const qrImages = await Promise.all(assets.map(labelQr));
+  const qrImages = await Promise.all(assets.map(labelQrSvg));
   const pages = assets.map((asset, index) => {
     const lines = [organization, asset.name, asset.plant ? `Plant: ${asset.plant}` : "", asset.company_code ? `Company: ${asset.company_code}` : "", asset.capitalization_date ? `Capitalized: ${asset.capitalization_date.slice(0, 4)}` : ""].filter(Boolean);
-    return `<article class="label"><div class="content"><img src="${qrImages[index]}" alt=""/><div class="details"><div class="asset-id">${escapeHtml(asset.asset_id)}</div>${lines.map(line => `<div class="meta">${escapeHtml(line)}</div>`).join("")}</div></div></article>`;
+    return `<article class="label"><div class="content"><div class="qr">${qrImages[index]}</div><div class="details"><div class="asset-id">${escapeHtml(asset.asset_id)}</div>${lines.map(line => `<div class="meta">${escapeHtml(line)}</div>`).join("")}</div></div></article>`;
   });
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     @page { size: ${width}mm ${height}mm; margin: 0; }
@@ -87,7 +92,8 @@ export async function buildLabelsPrintDocument(assets: LabelAsset[], size: Label
     .label { width: ${width}mm; height: ${height}mm; padding: ${pad}px; display: flex; align-items: center; justify-content: center; overflow: hidden; break-after: page; page-break-after: always; }
     .label:last-child { break-after: auto; page-break-after: auto; }
     .content { display: flex; align-items: center; justify-content: center; gap: ${pad}px; max-width: 100%; max-height: 100%; }
-    .content img { display: block; image-rendering: pixelated; flex: none; width: ${qrSize}; height: ${qrSize}; }
+    .qr { display: block; flex: none; width: ${qrSize}; height: ${qrSize}; background: #fff; }
+    .qr svg { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
     .details { min-width: 0; max-height: ${qrSize}; overflow: hidden; font-family: Arial, sans-serif; line-height: 1.2; color: #000; }
     .asset-id { font-size: ${size === "compact" ? 6 : 8}pt; font-weight: 700; overflow-wrap: anywhere; }
     .meta { margin-top: 0.5mm; font-size: ${size === "compact" ? 5 : 7}pt; overflow-wrap: anywhere; }
@@ -109,16 +115,22 @@ export function printLabelsInFrame(html: string) {
       reject(new Error(message));
     };
     const timer = window.setTimeout(() => fail("The print window did not open. Please use Download PDF instead."), 30000);
-    frame.onload = () => {
+    frame.onload = async () => {
       try {
         const printWindow = frame.contentWindow;
-        if (!printWindow) throw new Error("Print frame unavailable");
-        printWindow.focus();
-        printWindow.print();
+        const doc = frame.contentDocument;
+        if (!printWindow || !doc) throw new Error("Print frame unavailable");
+        try { await doc.fonts?.ready; } catch { /* ignore */ }
+        await Promise.all(Array.from(doc.images).map(img => img.decode().catch(() => undefined)));
+        await new Promise<void>(r => printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(() => r())));
         if (settled) return;
         settled = true;
         window.clearTimeout(timer);
-        window.setTimeout(cleanup, 1000);
+        // Keep the frame until printing finishes; removing it early sends blank pages.
+        const safety = window.setTimeout(cleanup, 60000);
+        printWindow.addEventListener("afterprint", () => { window.clearTimeout(safety); window.setTimeout(cleanup, 500); }, { once: true });
+        printWindow.focus();
+        printWindow.print();
         resolve();
       } catch {
         fail("Your browser could not open the print window. Please use Download PDF instead.");
