@@ -66,6 +66,10 @@ export async function buildLabelsPdf(assets: LabelAsset[], size: LabelSize, orga
   return pdf;
 }
 
+export function labelQrSizeMm(size: LabelSize) {
+  return labelSizes[size].height - 4;
+}
+
 export async function labelQrSvg(asset: LabelAsset) {
   if (!asset.asset_qr_codes?.token) throw new Error(`${asset.asset_id} has no QR token`);
   return QRCode.toString(assetVerificationUrl("", asset.asset_qr_codes.token), { type: "svg", margin: 2, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } });
@@ -79,8 +83,10 @@ export async function buildLabelsPrintDocument(assets: LabelAsset[], size: Label
   if (!assets.length) throw new Error("Select at least one asset");
   const { width, height } = labelSizes[size];
   const pad = 5; // px padding on every side of the sticker
-  const qrSize = `calc(${height}mm - ${pad * 2}px)`;
-  const qrImages = await Promise.all(assets.map(labelQrSvg));
+  const qrMm = labelQrSizeMm(size);
+  const qrSize = `${qrMm}mm`;
+  // Fixed millimetre width/height on the svg itself so print drivers never collapse it to zero.
+  const qrImages = (await Promise.all(assets.map(labelQrSvg))).map(svg => svg.replace("<svg ", `<svg width="${qrMm}mm" height="${qrMm}mm" `));
   const pages = assets.map((asset, index) => {
     const lines = [organization, asset.name, asset.plant ? `Plant: ${asset.plant}` : "", asset.company_code ? `Company: ${asset.company_code}` : "", asset.capitalization_date ? `Capitalized: ${asset.capitalization_date.slice(0, 4)}` : ""].filter(Boolean);
     return `<article class="label"><div class="content"><div class="qr">${qrImages[index]}</div><div class="details"><div class="asset-id">${escapeHtml(asset.asset_id)}</div>${lines.map(line => `<div class="meta">${escapeHtml(line)}</div>`).join("")}</div></div></article>`;
@@ -124,6 +130,15 @@ export function printLabelsInFrame(html: string) {
         await Promise.all(Array.from(doc.images).map(img => img.decode().catch(() => undefined)));
         await new Promise<void>(r => printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(() => r())));
         if (settled) return;
+        const labels = Array.from(doc.querySelectorAll(".label"));
+        const qrMissing = labels.some(label => {
+          const box = label.querySelector(".qr svg")?.getBoundingClientRect();
+          return !box || box.width < 1 || box.height < 1;
+        });
+        if (!labels.length || qrMissing) {
+          fail("QR code could not be drawn. Please use Download PDF instead.");
+          return;
+        }
         settled = true;
         window.clearTimeout(timer);
         // Keep the frame until printing finishes; removing it early sends blank pages.

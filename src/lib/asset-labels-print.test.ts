@@ -9,3 +9,8 @@ test("print labels embed a vector QR per asset and no image that must load", asy
   assert.equal(html.match(/<svg/g)?.length, 2);
   assert.ok(!html.includes("data:image"));
 });
+
+test("print QR has a fixed millimetre size that fits the sticker", async () => {
+  const html = await buildLabelsPrintDocument([asset("A1")], "compact", "HBL");
+  assert.match(html, /<svg width="26mm" height="26mm"/);
+});
