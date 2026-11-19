@@ -73,29 +73,24 @@ function escapeHtml(value: string) {
 export async function buildLabelsPrintDocument(assets: LabelAsset[], size: LabelSize, organization: string) {
   if (!assets.length) throw new Error("Select at least one asset");
   const { width, height } = labelSizes[size];
-  const margin = 10, gap = 3;
-  const columns = Math.floor((210 - margin * 2 + gap) / (width + gap));
-  const rows = Math.floor((297 - margin * 2 + gap) / (height + gap));
-  const perPage = columns * rows;
-  const qrSize = height - 8;
+  const pad = 5; // px padding on every side of the sticker
+  const qrSize = `calc(${height}mm - ${pad * 2}px)`;
   const qrImages = await Promise.all(assets.map(labelQr));
-  const labels = assets.map((asset, index) => {
+  const pages = assets.map((asset, index) => {
     const lines = [organization, asset.name, asset.plant ? `Plant: ${asset.plant}` : "", asset.company_code ? `Company: ${asset.company_code}` : "", asset.capitalization_date ? `Capitalized: ${asset.capitalization_date.slice(0, 4)}` : ""].filter(Boolean);
-    return `<article class="label"><img src="${qrImages[index]}" alt=""/><div class="details"><div class="asset-id">${escapeHtml(asset.asset_id)}</div>${lines.map(line => `<div class="meta">${escapeHtml(line)}</div>`).join("")}</div></article>`;
+    return `<article class="label"><div class="content"><img src="${qrImages[index]}" alt=""/><div class="details"><div class="asset-id">${escapeHtml(asset.asset_id)}</div>${lines.map(line => `<div class="meta">${escapeHtml(line)}</div>`).join("")}</div></div></article>`;
   });
-  const pages: string[] = [];
-  for (let start = 0; start < labels.length; start += perPage) pages.push(`<section class="sheet">${labels.slice(start, start + perPage).join("")}</section>`);
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-    @page { size: A4 portrait; margin: 0; }
+    @page { size: ${width}mm ${height}mm; margin: 0; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
-    .sheet { width: 210mm; height: 297mm; padding: ${margin}mm; display: grid; grid-template-columns: repeat(${columns}, ${width}mm); grid-auto-rows: ${height}mm; gap: ${gap}mm; align-content: start; break-after: page; }
-    .sheet:last-child { break-after: auto; }
-    .label { width: ${width}mm; height: ${height}mm; border: 0.2mm solid #000; display: grid; grid-template-columns: ${qrSize}mm minmax(0, 1fr); column-gap: 2mm; padding: 4mm 2mm 2mm; overflow: hidden; }
-    .label img { display: block; width: ${qrSize}mm; height: ${qrSize}mm; }
-    .details { min-width: 0; overflow: hidden; font-family: Arial, sans-serif; line-height: 1.2; color: #000; }
+    .label { width: ${width}mm; height: ${height}mm; padding: ${pad}px; display: flex; align-items: center; justify-content: center; overflow: hidden; break-after: page; page-break-after: always; }
+    .label:last-child { break-after: auto; page-break-after: auto; }
+    .content { display: flex; align-items: center; justify-content: center; gap: ${pad}px; max-width: 100%; max-height: 100%; }
+    .content img { display: block; flex: none; width: ${qrSize}; height: ${qrSize}; }
+    .details { min-width: 0; max-height: ${qrSize}; overflow: hidden; font-family: Arial, sans-serif; line-height: 1.2; color: #000; }
     .asset-id { font-size: ${size === "compact" ? 6 : 8}pt; font-weight: 700; overflow-wrap: anywhere; }
-    .meta { margin-top: 1mm; font-size: ${size === "compact" ? 5 : 7}pt; overflow-wrap: anywhere; }
+    .meta { margin-top: 0.5mm; font-size: ${size === "compact" ? 5 : 7}pt; overflow-wrap: anywhere; }
   </style></head><body>${pages.join("")}</body></html>`;
 }
 
@@ -103,7 +98,7 @@ export function printLabelsInFrame(html: string) {
   return new Promise<void>((resolve, reject) => {
     const frame = document.createElement("iframe");
     frame.setAttribute("aria-hidden", "true");
-    frame.style.cssText = "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0";
+    frame.style.cssText = "position:fixed;left:-10000px;top:0;width:100mm;height:60mm;border:0";
     let settled = false;
     const cleanup = () => frame.remove();
     const fail = (message: string) => {
