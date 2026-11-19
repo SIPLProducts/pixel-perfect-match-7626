@@ -1,3 +1,3 @@
 - Create User never modifies existing accounts (used emails are rejected); on failure it deletes only rows for the newly created user ID, then that account. Extra details go in profiles.preferences.user_details with workspace-validated plant/department IDs.
 - First-login changes use server-only app_metadata.must_change_password (not user-editable); protected server functions use requireAppAuth (src/lib/app-auth.ts) to refuse flagged accounts.
-- getWorkspaceData returns a plain JSON Response (parsed in workspace-query.ts) because 25k+ asset registers exceed the server-function serializer's output limit.
+- getWorkspaceData (no assets) and getWorkspaceAssets return plain JSON Responses parsed in workspace-query.ts; assets load in a separate background query so the workspace opens without waiting for 25k+ rows, which also exceed the serializer's output limit.

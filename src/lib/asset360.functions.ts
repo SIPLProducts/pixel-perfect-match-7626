@@ -105,17 +105,26 @@ export const getWorkspaceData = createServerFn({ method: "GET" })
   .middleware([requireAppAuth])
   .handler(async ({ context }) => Response.json(await loadWorkspaceData(context), { headers: { "Cache-Control": "no-store" } }));
 
+// The 25k-row asset register loads separately so the workspace (and Dashboard shell) opens immediately.
+export const getWorkspaceAssets = createServerFn({ method: "GET" })
+  .middleware([requireAppAuth])
+  .handler(async ({ context }) => {
+    const result = await loadWorkspaceData(context, true);
+    return Response.json({ assets: result.needsOnboarding ? [] : result.assets }, { headers: { "Cache-Control": "no-store" } });
+  });
+
 export type WorkspacePayload = Awaited<ReturnType<typeof loadWorkspaceData>>;
 
-async function loadWorkspaceData(context: AppAuthContext) {
+async function loadWorkspaceData(context: AppAuthContext, includeAssets = false) {
     const memberships = await getMemberships(context.supabase, context.userId);
     const membership = memberships.find((m) => m.active) ?? null;
     if (!membership) return { needsOnboarding: true as const, deactivated: memberships.length > 0 };
     const organizationId = membership.organization_id;
+    const loadAssets = () => readAllRows((from, to) => context.supabase.from("assets").select("id,asset_id,source,name,category_id,remarks,manufacturer,model,serial_number,plant,company_code,status,condition,location_id,department_id,assigned_employee_id,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,external_asset_number,asset_subnumber,depreciation_key,depreciation_start_date,cost_center,planned_life,erp_location,special_depreciation,supplier,accumulated_depreciation,quantity,wbs_element,starting_book_value,base_unit,currency,write_ups,transaction_acquisition_value,transferred_accumulated_depreciation,planned_depreciation,erp_reference_1,erp_reference_2,erp_reference_3,erp_reference_4,sap_fields,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token,active)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to));
     const [organization, profile, assets, categories, locations, departments] = await Promise.all([
       context.supabase.from("organizations").select("id,name,mode").eq("id", organizationId).single(),
       context.supabase.from("profiles").select("full_name,job_title,avatar_url").eq("id", context.userId).maybeSingle(),
-      readAllRows((from, to) => context.supabase.from("assets").select("id,asset_id,source,name,category_id,remarks,manufacturer,model,serial_number,plant,company_code,status,condition,location_id,department_id,assigned_employee_id,purchase_date,capitalization_date,purchase_value,current_value,warranty_end,created_at,external_asset_number,asset_subnumber,depreciation_key,depreciation_start_date,cost_center,planned_life,erp_location,special_depreciation,supplier,accumulated_depreciation,quantity,wbs_element,starting_book_value,base_unit,currency,write_ups,transaction_acquisition_value,transferred_accumulated_depreciation,planned_depreciation,erp_reference_1,erp_reference_2,erp_reference_3,erp_reference_4,sap_fields,asset_categories(name,prefix),locations(name),departments(name),employees(full_name),asset_qr_codes(token,active)").eq("organization_id", organizationId).order("created_at", { ascending: false }).order("id").range(from, to)),
+      includeAssets ? loadAssets() : Promise.resolve({ data: [] as NonNullable<Awaited<ReturnType<typeof loadAssets>>["data"]>, error: null }),
       readAllRows((from, to) => context.supabase.from("asset_categories").select("id,name,prefix,description,parent_id").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
       readAllRows((from, to) => context.supabase.from("locations").select("id,name,type,code,parent_id,status").eq("organization_id", organizationId).order("name").order("id").range(from, to)),
       readAllRows((from, to) => context.supabase.from("departments").select("id,name,code").eq("organization_id", organizationId).order("name").order("id").range(from, to)),

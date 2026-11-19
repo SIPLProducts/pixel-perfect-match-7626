@@ -1,8 +1,8 @@
 import { sapReportFields, sapFieldValue } from "@/lib/sap-report-fields";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, getRouteApi } from "@tanstack/react-router";
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { workspaceQueryOptions } from "@/lib/workspace-query";
+import { useMutation, useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { workspaceAssetsQueryOptions, workspaceQueryOptions } from "@/lib/workspace-query";
 import { useWorkspaceSync } from "./use-workspace-sync";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from "recharts";
 import { RefreshCw, Activity, UserCog, Pencil, Archive, ArrowRightLeft, Bell, Boxes, Building2, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, Download, FileSpreadsheet, Filter, History, LayoutDashboard, LoaderCircle, LogOut, Menu, MoreHorizontal, PackagePlus, PanelLeftClose, PanelLeftOpen, Plug, QrCode, Search, Settings, ShieldCheck, Upload, UserRound, Users, Wrench, X } from "lucide-react";
@@ -64,6 +64,7 @@ const pageCopy: Record<string, [string, string]> = { dashboard: ["Dashboard", "Y
 export function Workspace({ carPage = false }: { carPage?: boolean }) {
   const { user } = getRouteApi("/_authenticated").useRouteContext();
   const query = useSuspenseQuery(workspaceQueryOptions(user.id));
+  const assetsQuery = useQuery({ ...workspaceAssetsQueryOptions(user.id), enabled: !query.data.needsOnboarding });
   const syncStatus = useWorkspaceSync(query.data.needsOnboarding ? undefined : query.data.organization?.id, user.id);
   const [active, setActive] = useState("dashboard"); const [collapsed, setCollapsed] = useState(false); const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
@@ -71,13 +72,14 @@ export function Workspace({ carPage = false }: { carPage?: boolean }) {
   if (query.isLoading) return <LoadingScreen />;
    if (query.error && !query.data) return <ErrorScreen message={query.error.message} retry={() => query.refetch()} />;
   if (query.data?.needsOnboarding) return query.data.deactivated ? <DeactivatedScreen /> : <Onboarding />;
-  const data = query.data as WorkspaceData;
+  const data = { ...(query.data as WorkspaceData), assets: assetsQuery.data ?? [] } as WorkspaceData;
+  const assetsLoading = assetsQuery.isPending;
   const title = carPage ? ["QRmyCAR", "Vehicle register and parking messages."] : pageCopy[active] ?? pageCopy["dashboard"] ?? ["Dashboard", "Your asset operations at a glance."];
   const filtered = data.assets.filter((asset) => [asset.asset_id, asset.name, asset.serial_number, asset.manufacturer, asset.model, asset.plant, asset.company_code, ...assetErpFields.map(field => String(asset[field.column] ?? ""))].some((field) => field?.toLowerCase().includes(search.toLowerCase())));
   return <div className="app-backdrop min-h-screen">
     <Sidebar data={data} active={carPage ? "qrmycar" : active} setActive={(id) => {if (carPage) { void navigate({to:"/dashboard"}); } else setActive(id);setMobileOpen(false)}} collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}/>
     <div className={`min-h-screen transition-[margin] duration-200 ${collapsed ? "lg:ml-[76px]" : "lg:ml-[248px]"}`}>
-      <Topbar data={data} assets={data.assets} syncStatus={query.isRefetchError ? "Updates unavailable" : query.isFetching ? "Updating…" : syncStatus} onMenu={() => setMobileOpen(true)} onSelectAsset={(asset) => { setSelectedAsset(asset); setActive("assets"); }} />
+      <Topbar data={data} assets={data.assets} syncStatus={assetsLoading ? "Loading assets…" : query.isRefetchError || assetsQuery.isError ? "Updates unavailable" : query.isFetching || assetsQuery.isFetching ? "Updating…" : syncStatus} onMenu={() => setMobileOpen(true)} onSelectAsset={(asset) => { setSelectedAsset(asset); setActive("assets"); }} />
       <main className="mx-auto max-w-[1600px] px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">Operations center</p><h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{importOpen ? "Import assets" : assetDialog ? editingAsset ? "Edit asset" : "Add asset" : title[0]}</h1>{!assetDialog && !importOpen && <p className="mt-1 text-sm text-muted-foreground">{title[1]}</p>}</div>{!carPage && !assetDialog && !importOpen && <PageActions active={active} onImport={()=>setImportOpen(true)} setAssetDialog={()=>{setEditingAsset(null);setActive("assets");setAssetDialog(true)}} data={data} assets={data.assets}/>}</div>
         {importOpen && <AssetImport data={data} onClose={()=>setImportOpen(false)}/>}
