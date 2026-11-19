@@ -83,11 +83,11 @@ export async function buildLabelsPrintDocument(assets: LabelAsset[], size: Label
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     @page { size: ${width}mm ${height}mm; margin: 0; }
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
+    html, body { margin: 0; padding: 0; width: ${width}mm; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .label { width: ${width}mm; height: ${height}mm; padding: ${pad}px; display: flex; align-items: center; justify-content: center; overflow: hidden; break-after: page; page-break-after: always; }
     .label:last-child { break-after: auto; page-break-after: auto; }
     .content { display: flex; align-items: center; justify-content: center; gap: ${pad}px; max-width: 100%; max-height: 100%; }
-    .content img { display: block; flex: none; width: ${qrSize}; height: ${qrSize}; }
+    .content img { display: block; image-rendering: pixelated; flex: none; width: ${qrSize}; height: ${qrSize}; }
     .details { min-width: 0; max-height: ${qrSize}; overflow: hidden; font-family: Arial, sans-serif; line-height: 1.2; color: #000; }
     .asset-id { font-size: ${size === "compact" ? 6 : 8}pt; font-weight: 700; overflow-wrap: anywhere; }
     .meta { margin-top: 0.5mm; font-size: ${size === "compact" ? 5 : 7}pt; overflow-wrap: anywhere; }
