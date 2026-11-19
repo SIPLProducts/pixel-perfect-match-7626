@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_assets_org_created_id ON public.assets (organization_id, created_at DESC, id);
