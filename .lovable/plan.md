@@ -5,6 +5,9 @@ The print preview comes from the live site (qrmyassets.siplproducts.com). The st
 
 The live site is still running the older sticker code, which loaded the QR as a picture. The newer code that draws the QR straight onto the sticker exists only in the editor preview so far. It hasn't been published yet, and it hasn't been copied to your Quality or Production servers.
 
+## New screenshot
+With "Fit to printable area" turned on, the QR does print, but it is tiny and sits in the corner of a large USER page. With the other settings it disappears. So the QR is being created, and the problem is that its size is worked out from a calculation the printer driver doesn't follow. Fixing the QR to an exact size in millimetres (step 1) solves this.
+
 ## Steps
 1. **Make the QR impossible to miss**
    - Keep drawing the QR as solid black squares inside the sticker itself, so nothing has to load first.
