@@ -66,15 +66,6 @@ export async function buildLabelsPdf(assets: LabelAsset[], size: LabelSize, orga
   return pdf;
 }
 
-export function labelQrSizeMm(size: LabelSize) {
-  return labelSizes[size].height - 4;
-}
-
-export async function labelQrSvg(asset: LabelAsset) {
-  if (!asset.asset_qr_codes?.token) throw new Error(`${asset.asset_id} has no QR token`);
-  return QRCode.toString(assetVerificationUrl("", asset.asset_qr_codes.token), { type: "svg", margin: 2, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } });
-}
-
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
 }
@@ -82,27 +73,29 @@ function escapeHtml(value: string) {
 export async function buildLabelsPrintDocument(assets: LabelAsset[], size: LabelSize, organization: string) {
   if (!assets.length) throw new Error("Select at least one asset");
   const { width, height } = labelSizes[size];
-  const pad = 5; // px padding on every side of the sticker
-  const qrMm = labelQrSizeMm(size);
-  const qrSize = `${qrMm}mm`;
-  // Fixed millimetre width/height on the svg itself so print drivers never collapse it to zero.
-  const qrImages = (await Promise.all(assets.map(labelQrSvg))).map(svg => svg.replace("<svg ", `<svg width="${qrMm}mm" height="${qrMm}mm" `));
-  const pages = assets.map((asset, index) => {
+  const margin = 10, gap = 3;
+  const columns = Math.floor((210 - margin * 2 + gap) / (width + gap));
+  const rows = Math.floor((297 - margin * 2 + gap) / (height + gap));
+  const perPage = columns * rows;
+  const qrSize = height - 8;
+  const qrImages = await Promise.all(assets.map(labelQr));
+  const labels = assets.map((asset, index) => {
     const lines = [organization, asset.name, asset.plant ? `Plant: ${asset.plant}` : "", asset.company_code ? `Company: ${asset.company_code}` : "", asset.capitalization_date ? `Capitalized: ${asset.capitalization_date.slice(0, 4)}` : ""].filter(Boolean);
-    return `<article class="label"><div class="content"><div class="qr">${qrImages[index]}</div><div class="details"><div class="asset-id">${escapeHtml(asset.asset_id)}</div>${lines.map(line => `<div class="meta">${escapeHtml(line)}</div>`).join("")}</div></div></article>`;
+    return `<article class="label"><img src="${qrImages[index]}" alt=""/><div class="details"><div class="asset-id">${escapeHtml(asset.asset_id)}</div>${lines.map(line => `<div class="meta">${escapeHtml(line)}</div>`).join("")}</div></article>`;
   });
+  const pages: string[] = [];
+  for (let start = 0; start < labels.length; start += perPage) pages.push(`<section class="sheet">${labels.slice(start, start + perPage).join("")}</section>`);
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-    @page { size: ${width}mm ${height}mm; margin: 0; }
+    @page { size: A4 portrait; margin: 0; }
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; width: ${width}mm; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .label { width: ${width}mm; height: ${height}mm; padding: ${pad}px; display: flex; align-items: center; justify-content: center; overflow: hidden; break-after: page; page-break-after: always; }
-    .label:last-child { break-after: auto; page-break-after: auto; }
-    .content { display: flex; align-items: center; justify-content: center; gap: ${pad}px; max-width: 100%; max-height: 100%; }
-    .qr { display: block; flex: none; width: ${qrSize}; height: ${qrSize}; background: #fff; }
-    .qr svg { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
-    .details { min-width: 0; max-height: ${qrSize}; overflow: hidden; font-family: Arial, sans-serif; line-height: 1.2; color: #000; }
+    html, body { margin: 0; padding: 0; }
+    .sheet { width: 210mm; height: 297mm; padding: ${margin}mm; display: grid; grid-template-columns: repeat(${columns}, ${width}mm); grid-auto-rows: ${height}mm; gap: ${gap}mm; align-content: start; break-after: page; }
+    .sheet:last-child { break-after: auto; }
+    .label { width: ${width}mm; height: ${height}mm; border: 0.2mm solid #000; display: grid; grid-template-columns: ${qrSize}mm minmax(0, 1fr); column-gap: 2mm; padding: 4mm 2mm 2mm; overflow: hidden; }
+    .label img { display: block; width: ${qrSize}mm; height: ${qrSize}mm; }
+    .details { min-width: 0; overflow: hidden; font-family: Arial, sans-serif; line-height: 1.2; color: #000; }
     .asset-id { font-size: ${size === "compact" ? 6 : 8}pt; font-weight: 700; overflow-wrap: anywhere; }
-    .meta { margin-top: 0.5mm; font-size: ${size === "compact" ? 5 : 7}pt; overflow-wrap: anywhere; }
+    .meta { margin-top: 1mm; font-size: ${size === "compact" ? 5 : 7}pt; overflow-wrap: anywhere; }
   </style></head><body>${pages.join("")}</body></html>`;
 }
 
@@ -110,7 +103,7 @@ export function printLabelsInFrame(html: string) {
   return new Promise<void>((resolve, reject) => {
     const frame = document.createElement("iframe");
     frame.setAttribute("aria-hidden", "true");
-    frame.style.cssText = "position:fixed;left:-10000px;top:0;width:100mm;height:60mm;border:0";
+    frame.style.cssText = "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0";
     let settled = false;
     const cleanup = () => frame.remove();
     const fail = (message: string) => {
@@ -121,31 +114,16 @@ export function printLabelsInFrame(html: string) {
       reject(new Error(message));
     };
     const timer = window.setTimeout(() => fail("The print window did not open. Please use Download PDF instead."), 30000);
-    frame.onload = async () => {
+    frame.onload = () => {
       try {
         const printWindow = frame.contentWindow;
-        const doc = frame.contentDocument;
-        if (!printWindow || !doc) throw new Error("Print frame unavailable");
-        try { await doc.fonts?.ready; } catch { /* ignore */ }
-        await Promise.all(Array.from(doc.images).map(img => img.decode().catch(() => undefined)));
-        await new Promise<void>(r => printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(() => r())));
-        if (settled) return;
-        const labels = Array.from(doc.querySelectorAll(".label"));
-        const qrMissing = labels.some(label => {
-          const box = label.querySelector(".qr svg")?.getBoundingClientRect();
-          return !box || box.width < 1 || box.height < 1;
-        });
-        if (!labels.length || qrMissing) {
-          fail("QR code could not be drawn. Please use Download PDF instead.");
-          return;
-        }
-        settled = true;
-        window.clearTimeout(timer);
-        // Keep the frame until printing finishes; removing it early sends blank pages.
-        const safety = window.setTimeout(cleanup, 60000);
-        printWindow.addEventListener("afterprint", () => { window.clearTimeout(safety); window.setTimeout(cleanup, 500); }, { once: true });
+        if (!printWindow) throw new Error("Print frame unavailable");
         printWindow.focus();
         printWindow.print();
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        window.setTimeout(cleanup, 1000);
         resolve();
       } catch {
         fail("Your browser could not open the print window. Please use Download PDF instead.");
