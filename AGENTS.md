@@ -35,4 +35,3 @@
 - SAP API Settings (src/lib/sap-api*.ts, components/asset360/sap-api/) is Super Admin/Admin only; SAP passwords and proxy secrets live in sap_secrets (service-role only) and the browser only sees saved flags, so credentials never reach the client.
 - SAP assets enter only through sync_sap_asset_rows (batches ≤500, admin or trusted scheduler): SAP-number keys, source='sap', QR on insert and preserved on re-sync; manual assets are never overwritten.
 - Self-hosted builds use Nitro node-server; a Node-only plugin schedules six-hour all-plant SAP syncs, while hosted builds omit the timer.
-- getWorkspaceData returns a plain JSON Response (parsed in workspace-query.ts) because 25k+ asset registers exceed the server-function serializer's output limit.
